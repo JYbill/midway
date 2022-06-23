@@ -251,7 +251,7 @@ export class UserController {
 
 当 Query String 中的 key 重复时，`ctx.query` 只取 key 第一次出现时的值，后面再出现的都会被忽略。
 
-比如 `GET /user?uid=1&uid=2` 通过 `ctx.query` 拿到的值是 `{ uid: '1' }`。
+比如 `GET /user?uid=1&uid=2` 通过 `ctx.query` 拿到的值是 `{ uid: ['1', '2'] }`。
 
 
 
