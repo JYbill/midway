@@ -3,6 +3,53 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.5.2](https://github.com/midwayjs/midway/compare/v3.5.1...v3.5.2) (2022-09-08)
+
+
+### Bug Fixes
+
+* ctx.locals missing in faas ([#2302](https://github.com/midwayjs/midway/issues/2302)) ([a0a5903](https://github.com/midwayjs/midway/commit/a0a59036e0a0e8b5f92b17829af3f79191c1ee91))
+* example missing in swagger ([#2305](https://github.com/midwayjs/midway/issues/2305)) ([8bc8fcc](https://github.com/midwayjs/midway/commit/8bc8fcc9467bcee1f7cd1cf609c93b918c96bc5a))
+
+
+
+
+
+## [3.5.1](https://github.com/midwayjs/midway/compare/v3.5.0...v3.5.1) (2022-09-06)
+
+
+### Bug Fixes
+
+* glob with pattern ([#2293](https://github.com/midwayjs/midway/issues/2293)) ([1e05d41](https://github.com/midwayjs/midway/commit/1e05d41240094b0849caef53f10ef53a54e752ab))
+
+
+### Features
+
+* support add locals and add case ([#2289](https://github.com/midwayjs/midway/issues/2289)) ([fc373d9](https://github.com/midwayjs/midway/commit/fc373d9ac4d2ae82c90cd476292012fae2f5fc2d))
+* support receiver to bind this ([#2292](https://github.com/midwayjs/midway/issues/2292)) ([159184c](https://github.com/midwayjs/midway/commit/159184c87087cf9f76bc55a5cda46f90771bf7db))
+
+
+
+
+
+# [3.5.0](https://github.com/midwayjs/midway/compare/v3.4.13...v3.5.0) (2022-08-29)
+
+
+### Bug Fixes
+
+* **axios:** fix @midway/axios more configuration instance problems ([#2273](https://github.com/midwayjs/midway/issues/2273)) ([edf9377](https://github.com/midwayjs/midway/commit/edf937753a1b290de77bea334a052b22adbb9684))
+* oss config typings ([#2277](https://github.com/midwayjs/midway/issues/2277)) ([f62e42a](https://github.com/midwayjs/midway/commit/f62e42abf18ff4df3b6d2f23189ec0a46db72c11))
+
+
+### Features
+
+* add retry wrapper for invoke some remote data ([#2271](https://github.com/midwayjs/midway/issues/2271)) ([1c47338](https://github.com/midwayjs/midway/commit/1c473386937293104369cc8e5727c5330de4f85c))
+* **core:** config option for validating database connection during initialization ([#2234](https://github.com/midwayjs/midway/issues/2234)) ([cf5d360](https://github.com/midwayjs/midway/commit/cf5d360d7300db12f12cc3e1ce67806ad082a7b1))
+
+
+
+
+
 ## [3.4.13](https://github.com/midwayjs/midway/compare/v3.4.12...v3.4.13) (2022-08-24)
 
 

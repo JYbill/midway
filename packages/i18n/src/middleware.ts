@@ -98,6 +98,15 @@ export class I18nMiddleware implements IMiddleware<any, any> {
           i18nService.saveRequestLocale();
         }
 
+        res.locals[this.i18nConfig.localsField] = (
+          message: string,
+          data: any
+        ) => {
+          return i18nService.translate(message, {
+            args: data,
+          });
+        };
+
         return next();
       };
     } else {
@@ -141,6 +150,17 @@ export class I18nMiddleware implements IMiddleware<any, any> {
             i18nService.saveRequestLocale(requestLocale);
           } else {
             i18nService.saveRequestLocale();
+          }
+
+          if (ctx.locals) {
+            ctx.locals[this.i18nConfig.localsField] = (
+              message: string,
+              data: any
+            ) => {
+              return i18nService.translate(message, {
+                args: data,
+              });
+            };
           }
         }
 

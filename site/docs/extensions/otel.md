@@ -31,6 +31,9 @@ $ npm install --save @opentelemetry/sdk-node
 
 # 常用 Node.js 模块的埋点实现
 $ npm install --save @opentelemetry/auto-instrumentations-node
+
+# jaeger 输出器
+$ npm install --save @opentelemetry/exporter-jaeger
 ```
 
 以上的包均为  [open-telemetry](https://opentelemetry.io/) 的官方包。
@@ -52,15 +55,32 @@ const process = require('process');
 const opentelemetry = require('@opentelemetry/sdk-node');
 const { ConsoleSpanExporter } = require('@opentelemetry/sdk-trace-base');
 const { getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumentations-node');
+const { Resource } = require('@opentelemetry/resources');
+const { SemanticResourceAttributes } = require('@opentelemetry/semantic-conventions')
+const { JaegerExporter } = require('@opentelemetry/exporter-jaeger')
 
 // Midway 启动文件
 const { Bootstrap } = require('@midwayjs/bootstrap');
 
+// https://www.npmjs.com/package/@opentelemetry/exporter-jaeger
+const tracerAgentHost = process.env['TRACER_AGENT_HOST'] || '127.0.0.1'
+const jaegerExporter = new JaegerExporter({
+  host: tracerAgentHost,
+});
+
 // 初始化一个 open-telemetry 的 SDK
 const sdk = new opentelemetry.NodeSDK({
+  // 设置追踪服务名
+  resource: new Resource({
+    [SemanticResourceAttributes.SERVICE_NAME]: 'my-app',
+  }),
   // 配置当前的导出方式，比如这里配置了一个输出到控制台的，也可以配置其他的 Exporter，比如 Jaeger
   traceExporter: new ConsoleSpanExporter(),
+  // 配置当前导出为 jaeger
+  // traceExporter: jaegerExporter,
+
   // 这里配置了默认自带的一些监控模块，比如 http 模块等
+  // 若初始化时间很长，可注销此行，单独配置需要的 instrumentation 条目
   instrumentations: [getNodeAutoInstrumentations()]
 });
 
@@ -128,7 +148,18 @@ process.on('SIGTERM', () => {
 }
 ```
 
+### 开发调试入口
 
+`midway-bin` 使用 `--entryFile` 参数指定入口文件
+
+例如 `package.json` 文件
+```json
+{
+  "scripts": {
+    "start": "cross-env NODE_ENV=local midway-bin dev --ts --entryFile=bootstrap.js"
+  }
+}
+```
 
 ## 常用概念
 
@@ -222,6 +253,32 @@ const sdk = new opentelemetry.NodeSDK({
 
 - [opentelemetry-exporter-jaeger](https://github.com/open-telemetry/opentelemetry-js/blob/main/packages/opentelemetry-exporter-jaeger/README.md)
 - [opentelemetry-propagator-jaeger](https://github.com/open-telemetry/opentelemetry-js/blob/main/packages/opentelemetry-propagator-jaeger/README.md)
+
+
+
+### 阿里云 ARMS
+
+阿里云应用实时监控服务（[ARMS](https://www.aliyun.com/product/arms/)）已经支持了 open-telemetry 格式的指标，同时提供一个 sdk 进行接入。
+
+首先，安装 `opentelemetry-arms`。
+
+```bash
+# arms sdk
+$ npm install --save opentelemetry-arms
+```
+
+然后在启动时添加环境变量参数以及 `-r` 参数即可。
+
+```bash
+$ SERVICE_NAME=nodejs-opentelemetry-express AUTHENTICATION=****  ENDPOINT=grpc://**** node  -r opentelemetry-arms bootstrap.js
+```
+
+:::tip
+
+- 1、这种方式接入，无需在` bootstrap.js` 中添加代码。
+- 2、默认 sdk 仅提供了 http/express/koa 模块的链路支持，未包含其他 instrumentations，如有需求，可以拷贝源码至 `bootstrap.js` 中自定义。
+
+:::
 
 
 

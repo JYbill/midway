@@ -30,7 +30,7 @@ const result = await makeHttpRequest('http://127.1:7001/', {
     a: 1,
     b: 2
   },
-  dataType: 'json',
+  dataType: 'json',	// 返回的数据格式
 });
 
 // typeof result.data => 'object'
@@ -71,10 +71,12 @@ const result = await makeHttpRequest('http://127.1:7001/', {
     b: 2
   },
   dataType: 'json',
+  contentType:'json', 	// 发送的 post 为 json
 });
 
 // result.data ...
 ```
+
 
 设置请求超时时间。
 
@@ -126,6 +128,7 @@ const result = await httpclient.request('http://127.1:7001/', {
     b: 2
   },
   dataType: 'json',
+  contentType:'json', 	// 发送的 post 为 json
 });
 
 // result.data ...

@@ -3,6 +3,33 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.5.2](https://github.com/midwayjs/midway/compare/v3.5.1...v3.5.2) (2022-09-08)
+
+**Note:** Version bump only for package @midwayjs/http-proxy
+
+
+
+
+
+## [3.5.1](https://github.com/midwayjs/midway/compare/v3.5.0...v3.5.1) (2022-09-06)
+
+**Note:** Version bump only for package @midwayjs/http-proxy
+
+
+
+
+
+# [3.5.0](https://github.com/midwayjs/midway/compare/v3.4.13...v3.5.0) (2022-08-29)
+
+
+### Features
+
+* add retry wrapper for invoke some remote data ([#2271](https://github.com/midwayjs/midway/issues/2271)) ([1c47338](https://github.com/midwayjs/midway/commit/1c473386937293104369cc8e5727c5330de4f85c))
+
+
+
+
+
 ## [3.4.13](https://github.com/midwayjs/midway/compare/v3.4.12...v3.4.13) (2022-08-24)
 
 **Note:** Version bump only for package @midwayjs/http-proxy

@@ -1,6 +1,6 @@
 {
   "name": "@midwayjs/kafka",
-  "version": "3.4.13",
+  "version": "3.5.1",
   "description": "Midway Framework for kafka",
   "main": "dist/index",
   "typings": "index.d.ts",
@@ -33,13 +33,13 @@
   },
   "homepage": "https://github.com/midwayjs/midway#readme",
   "devDependencies": {
-    "@midwayjs/core": "^3.4.13",
+    "@midwayjs/core": "^3.5.1",
     "@midwayjs/decorator": "^3.4.11",
     "@midwayjs/logger": "^2.15.0",
-    "@midwayjs/mock": "^3.4.13"
+    "@midwayjs/mock": "^3.5.1"
   },
   "dependencies": {
-    "kafkajs": "2.1.0"
+    "kafkajs": "2.2.0"
   },
   "engines": {
     "node": ">=12"

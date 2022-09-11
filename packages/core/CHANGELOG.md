@@ -3,6 +3,34 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [3.5.1](https://github.com/midwayjs/midway/compare/v3.5.0...v3.5.1) (2022-09-06)
+
+
+### Bug Fixes
+
+* glob with pattern ([#2293](https://github.com/midwayjs/midway/issues/2293)) ([1e05d41](https://github.com/midwayjs/midway/commit/1e05d41240094b0849caef53f10ef53a54e752ab))
+
+
+### Features
+
+* support receiver to bind this ([#2292](https://github.com/midwayjs/midway/issues/2292)) ([159184c](https://github.com/midwayjs/midway/commit/159184c87087cf9f76bc55a5cda46f90771bf7db))
+
+
+
+
+
+# [3.5.0](https://github.com/midwayjs/midway/compare/v3.4.13...v3.5.0) (2022-08-29)
+
+
+### Features
+
+* add retry wrapper for invoke some remote data ([#2271](https://github.com/midwayjs/midway/issues/2271)) ([1c47338](https://github.com/midwayjs/midway/commit/1c473386937293104369cc8e5727c5330de4f85c))
+* **core:** config option for validating database connection during initialization ([#2234](https://github.com/midwayjs/midway/issues/2234)) ([cf5d360](https://github.com/midwayjs/midway/commit/cf5d360d7300db12f12cc3e1ce67806ad082a7b1))
+
+
+
+
+
 ## [3.4.13](https://github.com/midwayjs/midway/compare/v3.4.12...v3.4.13) (2022-08-24)
 
 
