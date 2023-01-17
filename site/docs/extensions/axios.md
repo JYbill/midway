@@ -77,6 +77,9 @@ const result = await makeHttpRequest('http://127.1:7001/', {
 // result.data ...
 ```
 
+:::caution
+注意，请不要在请求中直接返回 result 对象，result 对象是标准的 httpResponse，在大部分场景下无法被直接序列化，会抛出对象循环的错误。
+:::
 
 设置请求超时时间。
 
@@ -173,6 +176,8 @@ Midway 包裹了 [axios](https://github.com/axios/axios) 包，使得在代码�
 | 可用于标准项目    | ✅    |
 | 可用于 Serverless | ✅    |
 | 可用于一体化      | ✅    |
+| 包含独立主框架    | ❌    |
+| 包含独立日志      | ❌    |
 
 
 
@@ -253,7 +258,7 @@ export class UserService {
   async invoke() {
   	const url = 'http://www.weather.com.cn/data/cityinfo/101010100.html';
     const result = await this.httpService.get(url);
-    // TODO resut
+    // TODO result
   }
 }
 ```
@@ -319,22 +324,22 @@ export default {
 }
 ```
 
-在使用时，使用实例工厂来来获取自定义实例。
+使用方式如下：
 
 ```typescript
-import { HttpServiceFactory } from '@midwayjs/axios';
+import { HttpServiceFactory, HttpService } from '@midwayjs/axios';
+import { InjectClient } from '@midwayjs/core';
 
 @Provide()
 export class UserService {
 
-  @Inject()
-  httpServiceFactory: HttpServiceFactory;
+  @InjectClient(HttpServiceFactory, 'customAxios')
+  customAxios: HttpService;
 
   async invoke() {
   	const url = 'http://www.weather.com.cn/data/cityinfo/101010100.html';
-    const customAxios = this.httpServiceFactory.get('customAxios');
-    const result = await customAxios.get(url);
-    // TODO resut
+    const result = await this.customAxios.get(url);
+    // TODO result
   }
 }
 ```

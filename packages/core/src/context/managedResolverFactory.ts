@@ -1,17 +1,10 @@
 /**
  * 管理对象解析构建
  */
-import {
-  IManagedInstance,
-  InjectModeEnum,
-  ObjectIdentifier,
-} from '@midwayjs/decorator';
-import { KEYS } from '../common/constants';
+import { KEYS, REQUEST_CTX_KEY, REQUEST_OBJ_CTX_KEY } from '../constants';
 import {
   IManagedResolver,
   IObjectDefinition,
-  REQUEST_CTX_KEY,
-  REQUEST_OBJ_CTX_KEY,
   IManagedResolverFactoryCreateOptions,
   IMidwayContainer,
   ObjectLifeCycleEvent,
@@ -27,6 +20,11 @@ import {
   MidwaySingletonInjectRequestError,
   MidwayInconsistentVersionError,
 } from '../error';
+import {
+  IManagedInstance,
+  InjectModeEnum,
+  ObjectIdentifier,
+} from '../decorator';
 
 const debug = util.debuglog('midway:managedresolver');
 const debugLog = util.debuglog('midway:debug');

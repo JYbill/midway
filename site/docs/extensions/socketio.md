@@ -20,14 +20,16 @@ Midway 当前采用了最新的 [Socket.io (v4.0.0)](https://socket.io/docs/v4) 
 | 可用于标准项目    | ✅    |
 | 可用于 Serverless | ❌    |
 | 可用于一体化      | ✅    |
+| 包含独立主框架    | ✅    |
+| 包含独立日志      | ❌    |
 
 
 
+## 安装依赖
 
-## 创建示例
 
+在现有项目中安装 Socket.io 的依赖。
 
-或者在现有项目中安装 Socket.io 的依赖。
 ```bash
 $ npm i @midwayjs/socketio@3 --save
 ## 客户端可选
@@ -854,7 +856,7 @@ const subClient = pubClient.duplicate();
 export default {
   // ...
   socketIO: {
-    adapter: redisAdapter(pubClient, subClient)
+    adapter: createAdapter(pubClient, subClient)
   },
 }
 ```
@@ -862,6 +864,111 @@ export default {
 通过使用 `@socket.io/redis-adapter` 适配器运行 Socket.io，可以在不同的进程或服务器中运行多个 Socket.io 实例，这些实例都可以相互广播和发送事件。
 
 此外，还有一些 Adapter 上的特殊 API，具体可以查看 [文档](https://github.com/socketio/socket.io-redis-adapter#api)。
+
+
+
+## 粘性会话
+
+由于 Node.js 经常在启动时使用多进程（cluster）模式，如果同一个会话（sid）无法多次访问到同一个进程上，socket.io 就会报错。
+
+解决办法有两种。
+
+
+
+### 使用 WebSocket 协议
+
+最简单的方法，只启用 WebSocket 协议（禁用长轮询），这样就可以规避上述问题。
+
+你需要在服务端和客户端同时配置。
+
+```typescript
+// 服务端
+export default {
+  // ...
+  socketIO: {
+    // ...
+    transports: ['websocket'],
+  },
+}
+
+// 客户端
+const socket = io("http://127.0.0.1:7001", {
+  transports: ['websocket']
+});
+```
+
+
+
+### 调整进程模型
+
+这是相对复杂的方法，但是在 pm2 部署的场景下，既要支持粘性会话又要启用轮询支持，这是唯一的解法。
+
+第一步，禁用配置中启动的端口，比如：
+
+```typescript
+// src/config/config.default
+export default {
+  koa: {
+    // port: 7001,
+  },
+  socketIO: {
+    // ...
+  },
+};
+
+```
+
+如果开发需要，可以在 `config.local` 中加上端口，或者直接在 `package.json` 的 scripts 中加上端口。
+
+```json
+"scripts": {
+  "dev": "cross-env NODE_ENV=local midway-bin dev --ts --port=7001",
+},
+```
+
+
+
+第二步，调整你的 `bootstrap.js` 文件内容，使其变为下面的代码。
+
+```typescript
+const { Bootstrap, ClusterManager, setupStickyMaster } = require('@midwayjs/bootstrap');
+const http = require('http');
+
+// 创建一个进程管理器，处理子进程
+const clusterManager = new ClusterManager({
+  exec: __filename,
+  count: 4,
+  sticky: true, // 开启粘性会话支持
+});
+
+if (clusterManager.isPrimary()) {
+  // 主进程启动一个 http server 做监听
+  const httpServer = http.createServer();
+  setupStickyMaster(httpServer);
+
+  // 启动子进程
+  clusterManager.start().then(() => {
+    // 监听端口
+    httpServer.listen(7001);
+    console.log('main process is ok');
+  });
+
+  clusterManager.onStop(async () => {
+    // 停止时关闭 http server
+    await httpServer.close();
+  });
+} else {
+  // 子进程逻辑
+  Bootstrap
+    .run()
+    .then(() => {
+      console.log('child is ready');
+    });
+}
+
+```
+
+在 pm2 启动时，无需指定 `-i` 参数来启动 worker，直接 `pm2 --name=xxx ./bootstrap.js` 使其只启动一个进程。
 
 
 

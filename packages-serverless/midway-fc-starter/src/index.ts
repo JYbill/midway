@@ -7,6 +7,9 @@ import {
 import * as getRawBody from 'raw-body';
 import { IncomingMessage } from 'http';
 import { createContextManager } from '@midwayjs/async-hooks-context-manager';
+import { mockContext } from './mock';
+
+export * from './mock';
 
 function isOutputError() {
   return (
@@ -51,7 +54,7 @@ export class BootstrapStarter extends AbstractBootstrapStarter {
     return exports;
   }
 
-  async onInit(context: FC.InitializeContext, exports) {
+  async onInit(context: FC.InitializeContext = mockContext(), exports) {
     const applicationAdapter = {
       getFunctionName() {
         return context.function.name;
@@ -99,6 +102,21 @@ export class BootstrapStarter extends AbstractBootstrapStarter {
       }
     }
 
+    let handlerName = oldContext?.function.handler || context.function.handler;
+
+    // 聚合部署的情况
+    if (this.options.aggregationHandlerName) {
+      if (this.options.handlerNameMapping) {
+        [handlerName, event, context, oldContext] =
+          this.options.handlerNameMapping(
+            handlerName,
+            event,
+            context,
+            oldContext
+          );
+      }
+    }
+
     let ctx;
     if (isHTTPMode) {
       (event as any).getOriginContext = () => {
@@ -136,31 +154,14 @@ export class BootstrapStarter extends AbstractBootstrapStarter {
       };
     }
 
-    let handlerName = oldContext?.function.handler || context.function.handler;
-
-    // 聚合部署的情况
-    if (this.options.aggregationHandlerName) {
-      if (this.options.handlerNameMapping) {
-        [handlerName, event, context, oldContext] =
-          this.options.handlerNameMapping(
-            handlerName,
-            event,
-            context,
-            oldContext
-          );
-      } else if (isHTTPMode) {
-        handlerName = ctx.path;
-      }
-    }
-
-    const triggerFunction = this.framework.getTriggerFunction(handlerName);
-
     try {
-      const result = await triggerFunction(ctx, {
-        isHttpFunction: isHTTPMode || isApiGateway,
-        originEvent: event,
-        originContext: context,
-      });
+      const result = await this.framework.invokeTriggerFunction(
+        ctx,
+        handlerName,
+        {
+          isHttpFunction: isHTTPMode || isApiGateway,
+        }
+      );
       if (isHTTPMode || isApiGateway) {
         const { isBase64Encoded, statusCode, headers, body } = result;
 

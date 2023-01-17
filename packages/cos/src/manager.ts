@@ -6,8 +6,6 @@ import {
   Provide,
   Scope,
   ScopeEnum,
-} from '@midwayjs/decorator';
-import {
   ServiceFactory,
   delegateTargetPrototypeMethod,
   MidwayCommonError,
@@ -54,7 +52,9 @@ export class COSService implements COS {
 
   @Init()
   async init() {
-    this.instance = this.serviceFactory.get('default');
+    this.instance = this.serviceFactory.get(
+      this.serviceFactory.getDefaultClientName?.() || 'default'
+    );
     if (!this.instance) {
       throw new MidwayCommonError('cos default instance not found.');
     }

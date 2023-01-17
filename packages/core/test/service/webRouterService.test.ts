@@ -1,7 +1,6 @@
 import { createLightFramework } from '../util';
 import * as path from 'path';
-import { MidwayContainer, MidwayWebRouterService } from '../../src';
-import { bindContainer, clearAllModule } from '@midwayjs/decorator';
+import { MidwayContainer, MidwayWebRouterService, bindContainer, clearAllModule } from '../../src';
 
 describe('/test/service/webRouterService.test.ts', function () {
 
@@ -45,10 +44,21 @@ describe('/test/service/webRouterService.test.ts', function () {
     });
     await collector.getFlattenRouterTable({
       compileUrlPattern: true,
-      noCache: true
     });
     routeInfo = await collector.getMatchedRouterInfo('/api', 'get');
     expect(routeInfo.url).toEqual('/*')
+  });
+
+  it('fix issue 2319', async () => {
+    const framework = await createLightFramework(path.join(
+      __dirname,
+      '../fixtures/issue-2319/src'
+    ));
+    const collector = await framework.getApplicationContext().getAsync('midwayWebRouterService') as any;
+    const fullUrls = (await collector.getFlattenRouterTable()).map(item => {
+      return item.fullUrl;
+    });
+    expect(fullUrls).toMatchSnapshot();
   });
 
   it('should test generate router and flatten router', async () => {
@@ -74,7 +84,6 @@ describe('/test/service/webRouterService.test.ts', function () {
     });
 
     const routes1 = await midwayWebRouterService.getFlattenRouterTable({
-      noCache: true,
       compileUrlPattern: true,
     });
     expect(routes1.length).toEqual(15);
@@ -99,7 +108,17 @@ describe('/test/service/webRouterService.test.ts', function () {
       '../fixtures/app-with-duplicate-controller-options/src'
     ));
     const collector = await framework.getApplicationContext().getAsync(MidwayWebRouterService);
-    await expect(collector.getFlattenRouterTable()).rejects.toThrow('duplicated controller options')
+    await expect(collector.getFlattenRouterTable()).rejects.toThrow('duplicated controller options');
+  });
+
+  it('should test add controller and with router filter', async () => {
+    const framework = await createLightFramework(path.join(
+      __dirname,
+      '../fixtures/app-with-controller-filter/src'
+    ));
+    const collector = await framework.getApplicationContext().getAsync(MidwayWebRouterService);
+    const result = await collector.getFlattenRouterTable();
+    expect(result.length).toEqual(1);
   });
 
   it('should sort param', function () {

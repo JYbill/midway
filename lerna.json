@@ -2,7 +2,8 @@
   "packages": [
     "packages/*",
     "packages-serverless/*",
-    "packages-legacy/*"
+    "packages-legacy/*",
+    "packages-resource/*"
   ],
   "command": {
     "bootstrap": {
@@ -20,6 +21,7 @@
     },
     "publish": {
       "ignoreChanges": [
+        "package.json",
         "*.md",
         "**/test/**",
         "jest.config.js",
@@ -27,11 +29,23 @@
       ]
     },
     "version": {
-      "conventionalCommits": true,
-      "createRelease": "github",
       "forcePublish": "@midwayjs/version"
     }
   },
+  "changelog": {
+    "repo": "midwayjs/midway",
+    "labels": {
+      "pr: breaking change": ":boom: Breaking Change",
+      "pr: new feature": ":rocket: New Feature",
+      "pr: bug fix": ":bug: Bug Fix",
+      "pr: performance": ":running_woman: Performance",
+      "pr: polish": ":nail_care: Polish",
+      "pr: documentation": ":memo: Documentation",
+      "pr: maintenance": ":wrench: Maintenance",
+      "pr: dependencies": ":package: Dependencies"
+    },
+    "cacheDir": ".changelog"
+  },
   "npmClient": "npm",
-  "version": "3.5.2"
+  "version": "3.9.9"
 }

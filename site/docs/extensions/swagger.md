@@ -8,6 +8,8 @@
 | 可用于标准项目    | ✅    |
 | 可用于 Serverless | ❌    |
 | 可用于一体化      | ❌    |
+| 包含独立主框架    | ❌    |
+| 包含独立日志      | ❌    |
 
 
 
@@ -170,7 +172,7 @@ export class CreateCatDto {
 **字符串**
 
 ```typescript
-@ApiProperty({ 
+@ApiProperty({
   type: 'string',
   // ...
 })
@@ -180,8 +182,8 @@ name: string;
 **布尔类型**
 
 ```typescript
-@ApiProperty({ 
-  type: 'boolean', 
+@ApiProperty({
+  type: 'boolean',
   example: 'true',
   // ...
 })
@@ -191,9 +193,9 @@ isPure: boolean;
 **数字类型**
 
 ```typescript
-@ApiProperty({ 
+@ApiProperty({
   type: 'number',
-  example: '1', 
+  example: '1',
   description: 'The name of the Catage'
 })
 age: number;
@@ -280,10 +282,10 @@ export class Cat {
 }
 
 export class CreateCatDto {
-  
+
   // ...
 
-  @ApiProperty({ 
+  @ApiProperty({
     type: Cat,	// 这里无需指定 example
   })
   related: Cat;
@@ -315,7 +317,7 @@ class Cat {
 export class CreateCatDto {
   // ...
 
-  @ApiProperty({ 
+  @ApiProperty({
     type: 'array',
     items: {
       $ref: getSchemaPath(Cat),
@@ -330,6 +332,47 @@ export class CreateCatDto {
 效果如下：
 
 ![](https://img.alicdn.com/imgextra/i1/O1CN01h4sQJ41dP0uq4fgi7_!!6000000003727-2-tps-1332-666.png)
+
+
+
+### 循环依赖
+
+当类之间具有循环依赖关系时，请使用惰性函数提供类型信息。
+
+比如 `type` 字段的循环。
+
+```typescript
+class Photo {
+  // ...
+  @ApiProperty({
+    type: () => Album
+  })
+  album: Album;
+}
+class Album {
+  // ...
+  @ApiProperty({
+    type: () => Photo
+  })
+  photo: Photo;
+}
+```
+
+`getSchemaPath` 也可以使用。
+
+```typescript
+export class CreateCatDto {
+  // ...
+
+  @ApiProperty({
+    type: 'array',
+    items: {
+      $ref: () => getSchemaPath(Cat)
+    }
+  })
+  relatedList: Cat[];
+}
+```
 
 
 
@@ -434,7 +477,7 @@ Swagger UI 中展示：
 @ApiBody({ description: 'hello file' })
 @ApiBody({ description: 'hello fields', type: Cat })
 async upload(@File() f: any, @Fields() data: Cat) {
-  return null;
+  // ...
 }
 ```
 
@@ -446,7 +489,7 @@ Swagger UI 中展示：
 ```typescript
 @Post('/test1')
 async upload1(@Files() f: any[], @Fields() data: Cat) {
-  return null;
+  // ...
 }
 ```
 
@@ -575,6 +618,63 @@ class TestModel {
 }
 ```
 
+### 泛型返回数据
+
+Swagger 本身不支持泛型数据，泛型作为 Typescript 的一种类型，会在构建期抹掉，在运行时无法读取。
+
+我们可以用一些取巧的方式来定义。
+
+比如，我们需要将返回值增加一些通用的包裹结构。
+
+```typescript
+{
+  code: 200,
+  message: 'xxx',
+  data: any
+}
+```
+
+为此，我们可以编写一个方法，入参是返回的 data，返回一个包裹的类。
+
+```typescript
+export function SuccessWrapper<T extends Type>(ResourceCls: T) {
+  class Successed {
+    @ApiProperty({ description: '状态码' })
+    code: number;
+
+    @ApiProperty({ description: '消息' })
+    message: string;
+
+    @ApiProperty({
+      type: ResourceCls,
+    })
+    data: T;
+  }
+
+  return Successed;
+}
+```
+
+我们可以基于这个方法，来实现我们自己的返回类。
+
+```typescript
+class ViewCat extends SuccessWrapper(Cat) {}
+```
+
+在使用的时候，可以直接指定这个类即可。
+
+```typescript
+@Get('/:id')
+@ApiResponse({
+  status: 200,
+  description: 'The found record',
+  type: ViewCat,
+})
+findOne(@Param('id') id: string, @Query('test') test: any): ViewCat {
+  // ...
+}
+```
+
 
 
 ## 高级用法
@@ -587,6 +687,30 @@ Swagger 会对 paths 分标签，如果 Controller 未定义任何标签，则�
 @Controller('/hello')
 export class HelloController {}
 ```
+
+可以通过配置给 Tag 添加描述。
+
+```typescript
+// src/config/config.default.ts
+
+export default {
+  swagger: {
+    tags: [
+      {
+        name: 'api',
+        description: 'API Document'
+      },
+      {
+        name: 'hello',
+        description: 'Other Router'
+      },
+    ]
+  }
+}
+
+```
+
+
 
 
 
@@ -905,3 +1029,10 @@ export interface AuthOptions extends Omit<SecuritySchemeObject, 'type'> {
 | ```@ApiParam```             | Method            |
 | ```@ApiExtraModel```        | Controller/Model  |
 
+
+
+## 常见问题
+
+### `@Get` 等路由注解中的 `summary` 或者 `description` 不生效
+
+当存在 `@ApiOperation` 时候，将优先使用 `@ApiOperation` 中的 `summary` 或者 `description`，所以在 `@ApiOperation` 与 `@Get` 等路由注解中，只需要写一个即可。

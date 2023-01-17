@@ -13,10 +13,12 @@ import {
   MidwayApplicationManager,
   MidwayConfigService,
   getCurrentApplicationContext,
+  CONFIGURATION_KEY,
+  Framework,
+  sleep,
 } from '@midwayjs/core';
 import { isAbsolute, join, resolve } from 'path';
 import { remove } from 'fs-extra';
-import { CONFIGURATION_KEY, Framework, sleep } from '@midwayjs/decorator';
 import { clearAllLoggers } from '@midwayjs/logger';
 import { ComponentModule, MockAppConfigurationOptions } from './interface';
 import {
@@ -55,112 +57,120 @@ export async function create<
   debug(`[mock]: Create app, appDir="${appDir}"`);
   process.env.MIDWAY_TS_MODE = 'true';
 
-  if (appDir) {
-    // 处理测试的 fixtures
-    if (!isAbsolute(appDir)) {
-      appDir = join(process.cwd(), 'test', 'fixtures', appDir);
-    }
-
-    if (!existsSync(appDir)) {
-      throw new MidwayCommonError(
-        `Path "${appDir}" not exists, please check it.`
-      );
-    }
-  }
-
-  clearAllLoggers();
-
-  options = options || ({} as any);
-  if (options.baseDir) {
-    safeRequire(join(`${options.baseDir}`, 'interface'));
-  } else if (appDir) {
-    options.baseDir = `${appDir}/src`;
-    safeRequire(join(`${options.baseDir}`, 'interface'));
-  }
-
-  if (options.entryFile) {
-    // start from entry file, like bootstrap.js
-    options.entryFile = formatPath(appDir, options.entryFile);
-    global['MIDWAY_BOOTSTRAP_APP_READY'] = false;
-    // set app in @midwayjs/bootstrap
-    require(options.entryFile);
-
-    await new Promise<void>((resolve, reject) => {
-      const timeoutHandler = setTimeout(() => {
-        clearInterval(internalHandler);
-        reject(new Error('[midway]: bootstrap timeout'));
-      }, options.bootstrapTimeout || 30 * 1000);
-      const internalHandler = setInterval(() => {
-        if (global['MIDWAY_BOOTSTRAP_APP_READY'] === true) {
-          clearInterval(internalHandler);
-          clearTimeout(timeoutHandler);
-          resolve();
-        } else {
-          debug('[mock]: bootstrap not ready and wait next check');
-        }
-      }, 200);
-    });
-    return;
-  }
-
-  if (!options.imports && customFramework) {
-    options.imports = transformFrameworkToConfiguration(customFramework);
-  }
-
-  if (customFramework?.['Configuration']) {
-    options.imports = customFramework;
-    customFramework = customFramework['Framework'];
-  }
-
-  const container = new MidwayContainer();
-  const bindModuleMap: WeakMap<any, boolean> = new WeakMap();
-  // 这里设置是因为在 midway 单测中会不断的复用装饰器元信息，又不能清理缓存，所以在这里做一些过滤
-  container.onBeforeBind(target => {
-    bindModuleMap.set(target, true);
-  });
-
-  const originMethod = container.listModule;
-
-  container.listModule = key => {
-    const modules = originMethod.call(container, key);
-    if (key === CONFIGURATION_KEY) {
-      return modules;
-    }
-
-    return modules.filter((module: any) => {
-      if (bindModuleMap.has(module)) {
-        return true;
-      } else {
-        debug(
-          '[mock] Filter "%o" module without binding when list module %s.',
-          module.name ?? module,
-          key
-        );
-        return false;
+  try {
+    if (appDir) {
+      // 处理测试的 fixtures
+      if (!isAbsolute(appDir)) {
+        appDir = join(process.cwd(), 'test', 'fixtures', appDir);
       }
+
+      if (!existsSync(appDir)) {
+        throw new MidwayCommonError(
+          `Path "${appDir}" not exists, please check it.`
+        );
+      }
+    }
+
+    clearAllLoggers();
+
+    options = options || ({} as any);
+    if (options.baseDir) {
+      safeRequire(join(`${options.baseDir}`, 'interface'));
+    } else if (appDir) {
+      options.baseDir = `${appDir}/src`;
+      safeRequire(join(`${options.baseDir}`, 'interface'));
+    }
+
+    if (options.entryFile) {
+      // start from entry file, like bootstrap.js
+      options.entryFile = formatPath(appDir, options.entryFile);
+      global['MIDWAY_BOOTSTRAP_APP_READY'] = false;
+      // set app in @midwayjs/bootstrap
+      require(options.entryFile);
+
+      await new Promise<void>((resolve, reject) => {
+        const timeoutHandler = setTimeout(() => {
+          clearInterval(internalHandler);
+          reject(new Error('[midway]: bootstrap timeout'));
+        }, options.bootstrapTimeout || 30 * 1000);
+        const internalHandler = setInterval(() => {
+          if (global['MIDWAY_BOOTSTRAP_APP_READY'] === true) {
+            clearInterval(internalHandler);
+            clearTimeout(timeoutHandler);
+            resolve();
+          } else {
+            debug('[mock]: bootstrap not ready and wait next check');
+          }
+        }, 200);
+      });
+      return;
+    }
+
+    if (!options.imports && customFramework) {
+      options.imports = transformFrameworkToConfiguration(customFramework);
+    }
+
+    if (customFramework?.['Configuration']) {
+      options.imports = customFramework;
+      customFramework = customFramework['Framework'];
+    }
+
+    const container = new MidwayContainer();
+    const bindModuleMap: WeakMap<any, boolean> = new WeakMap();
+    // 这里设置是因为在 midway 单测中会不断的复用装饰器元信息，又不能清理缓存，所以在这里做一些过滤
+    container.onBeforeBind(target => {
+      bindModuleMap.set(target, true);
     });
-  };
 
-  options.applicationContext = container;
+    const originMethod = container.listModule;
 
-  await initializeGlobalApplicationContext({
-    ...options,
-    appDir,
-    asyncContextManager: createContextManager(),
-    imports: []
-      .concat(options.imports)
-      .concat(
-        options.baseDir
-          ? safeRequire(join(options.baseDir, 'configuration'))
-          : []
-      ),
-  });
+    container.listModule = key => {
+      const modules = originMethod.call(container, key);
+      if (key === CONFIGURATION_KEY) {
+        return modules;
+      }
 
-  if (customFramework) {
-    return container.getAsync(customFramework as any);
-  } else {
-    const frameworkService = await container.getAsync(MidwayFrameworkService);
-    return frameworkService.getMainFramework() as T;
+      return modules.filter((module: any) => {
+        if (bindModuleMap.has(module)) {
+          return true;
+        } else {
+          debug(
+            '[mock] Filter "%o" module without binding when list module %s.',
+            module.name ?? module,
+            key
+          );
+          return false;
+        }
+      });
+    };
+
+    options.applicationContext = container;
+
+    await initializeGlobalApplicationContext({
+      ...options,
+      appDir,
+      asyncContextManager: createContextManager(),
+      imports: []
+        .concat(options.imports)
+        .concat(
+          options.baseDir
+            ? safeRequire(join(options.baseDir, 'configuration'))
+            : []
+        ),
+    });
+
+    if (customFramework) {
+      return container.getAsync(customFramework as any);
+    } else {
+      const frameworkService = await container.getAsync(MidwayFrameworkService);
+      return frameworkService.getMainFramework() as T;
+    }
+  } catch (err) {
+    // catch for jest beforeAll can't throw error
+    if (process.env.JEST_WORKER_ID) {
+      console.error(err);
+    }
+    throw err;
   }
 }
 
@@ -260,7 +270,9 @@ export async function createFunctionApp<
 
     // new mode
     const exports = options.starter.start(options);
-    await exports[options.initializeMethodName || 'initializer']();
+    await exports[options.initializeMethodName || 'initializer'](
+      options['initializeContext']
+    );
     const appCtx = options.starter.getApplicationContext();
 
     const configService = appCtx.get(MidwayConfigService) as any;
@@ -271,7 +283,8 @@ export async function createFunctionApp<
     const app = appManager.getApplication(MidwayFrameworkType.FAAS);
 
     const faasConfig = configService.getConfiguration('faas') ?? {};
-    const customPort = process.env.MIDWAY_HTTP_PORT ?? faasConfig['port'];
+    const customPort =
+      process.env.MIDWAY_HTTP_PORT ?? faasConfig['port'] ?? options['port'];
 
     app.callback2 = () => {
       // mock a real http server response for local dev
@@ -292,12 +305,13 @@ export async function createFunctionApp<
         const ctx = await framework.wrapHttpRequest(req);
 
         // create event and invoke
-        const func = framework.getTriggerFunction(url.pathname);
-        const result = await func(ctx, {
-          isHttpFunction: true,
-          originEvent: req,
-          originContext: {},
-        });
+        const result = await framework.invokeTriggerFunction(
+          ctx,
+          url.pathname,
+          {
+            isHttpFunction: true,
+          }
+        );
         const { statusCode, headers, body } = result as any;
         if (res.headersSent) {
           return;

@@ -6,21 +6,21 @@ import {
   Provide,
   Scope,
   ScopeEnum,
-} from '@midwayjs/decorator';
-import {
   ServiceFactory,
   delegateTargetAllPrototypeMethod,
   delegateTargetMethod,
   MidwayCommonError,
+  ServiceFactoryConfigOption,
 } from '@midwayjs/core';
 import Redis from 'ioredis';
 import * as assert from 'assert';
+import { RedisConfigOptions } from './interface';
 
 @Provide()
 @Scope(ScopeEnum.Singleton)
 export class RedisServiceFactory extends ServiceFactory<Redis> {
   @Config('redis')
-  redisConfig;
+  redisConfig: ServiceFactoryConfigOption<RedisConfigOptions>;
 
   @Init()
   async init() {
@@ -68,7 +68,7 @@ export class RedisServiceFactory extends ServiceFactory<Redis> {
         `[midway:redis] 'host: ${config.host}', 'port: ${config.port}' are required on config`
       );
       this.logger.info(
-        '[midway:redis] server connecting redis://:***@%s:%s/%s',
+        '[midway:redis] server connecting redis://:***@%s:%s',
         config.host,
         config.port
       );
@@ -112,7 +112,9 @@ export class RedisService implements Redis {
 
   @Init()
   async init() {
-    this.instance = this.serviceFactory.get('default');
+    this.instance = this.serviceFactory.get(
+      this.serviceFactory.getDefaultClientName?.() || 'default'
+    );
     if (!this.instance) {
       throw new MidwayCommonError('redis default instance not found.');
     }

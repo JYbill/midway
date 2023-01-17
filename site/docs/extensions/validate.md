@@ -9,6 +9,8 @@
 | 可用于标准项目    | ✅    |
 | 可用于 Serverless | ✅    |
 | 可用于一体化      | ✅    |
+| 包含独立主框架    | ❌    |
+| 包含独立日志      | ❌    |
 
 
 
@@ -333,7 +335,7 @@ export class UserDTO {
 
   @Rule(RuleType.string().required())
   name: string;
-  
+
   @Rule(RuleType.alternatives([RuleType.string(), getSchema(SchoolDTO)]).required())
   school: string | SchoolDTO;
 }
@@ -560,12 +562,12 @@ export default {
     localeTable: {
       zh_CN: {
         validate: {
-          'string.max': 'string is too long',
+          'string.max': '字符超长',
         },
       },
       en_US: {
         validate: {
-          'string.max': '字符超长',
+          'string.max': 'string is too long',
         },
       },
     },
@@ -638,8 +640,8 @@ export class UserService {
       nickName: 'harry'
     });
 
-    // 失败返回 resut.error
-    // 成功返回 resut.value
+    // 失败返回 result.error
+    // 成功返回 result.value
   }
 }
 ```

@@ -3,8 +3,8 @@ import {
   Middleware,
   MidwayFrameworkType,
   Match,
-} from '@midwayjs/decorator';
-import { IMiddleware } from '@midwayjs/core';
+  IMiddleware,
+} from '@midwayjs/core';
 import { JSONPService } from '../jsonp';
 import { JSONPCSRFError } from '../error';
 import { JSONPOptions } from '../interface';
@@ -48,5 +48,9 @@ export class JSONPMiddleware implements IMiddleware<any, any> {
       }
     }
     return await next();
+  }
+
+  static getName(): string {
+    return 'jsonp';
   }
 }

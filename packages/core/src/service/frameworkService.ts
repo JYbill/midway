@@ -8,17 +8,18 @@ import {
   Inject,
   listModule,
   LOGGER_KEY,
-  MidwayFrameworkType,
   PIPELINE_IDENTIFIER,
   PLUGIN_KEY,
   Provide,
   Scope,
   ScopeEnum,
-} from '@midwayjs/decorator';
+  MidwayFrameworkType,
+  FACTORY_SERVICE_CLIENT_KEY,
+} from '../decorator';
 import {
   IMidwayContainer,
   IMidwayFramework,
-  REQUEST_OBJ_CTX_KEY,
+  IServiceFactory,
 } from '../interface';
 import { MidwayConfigService } from './configService';
 import { MidwayLoggerService } from './loggerService';
@@ -28,7 +29,8 @@ import { MidwayDecoratorService } from './decoratorService';
 import { MidwayAspectService } from './aspectService';
 import { MidwayApplicationManager } from '../common/applicationManager';
 import * as util from 'util';
-import { MidwayCommonError } from '../error';
+import { MidwayCommonError, MidwayParameterError } from '../error';
+import { REQUEST_OBJ_CTX_KEY } from '../constants';
 
 const debug = util.debuglog('midway:debug');
 
@@ -117,6 +119,33 @@ export class MidwayFrameworkService {
       }
     );
 
+    this.decoratorService.registerPropertyHandler(
+      FACTORY_SERVICE_CLIENT_KEY,
+      (
+        propertyName,
+        meta: {
+          serviceFactoryClz: new (...args) => IServiceFactory<unknown>;
+          clientName: string;
+        }
+      ) => {
+        const factory = this.applicationContext.get(meta.serviceFactoryClz);
+        const clientName = meta.clientName || factory.getDefaultClientName();
+        if (clientName && factory.has(clientName)) {
+          return factory.get(clientName);
+        } else {
+          if (!clientName) {
+            throw new MidwayParameterError(
+              `Please set clientName or options.defaultClientName for ${meta.serviceFactoryClz.name}).`
+            );
+          } else {
+            throw new MidwayParameterError(
+              `ClientName(${clientName} not found in ${meta.serviceFactoryClz.name}).`
+            );
+          }
+        }
+      }
+    );
+
     let frameworks: Array<new (...args) => any> = listModule(FRAMEWORK_KEY);
     // filter proto
     frameworks = filterProtoFramework(frameworks);
@@ -164,10 +193,21 @@ export class MidwayFrameworkService {
         this.globalFrameworkList.push(frameworkInstance);
       }
 
-      const nsSet = this.applicationContext['namespaceSet'] as Set<string>;
       let mainNs;
-      if (nsSet.size > 0) {
-        [mainNs] = nsSet;
+
+      /**
+       * 这里处理引入组件的顺序，在主框架之前是否包含其他的 framework
+       * 1、装饰器的顺序和 import 的写的顺序有关
+       * 2、主框架和 configuration 中的配置加载顺序有关
+       * 3、两者不符合的话，App 装饰器获取的 app 会不一致，导致中间件等无法正常使用
+       */
+      const namespaceList = this.applicationContext.getNamespaceList();
+      for (const namespace of namespaceList) {
+        const framework = this.applicationManager.getApplication(namespace);
+        if (framework) {
+          mainNs = namespace;
+          break;
+        }
       }
 
       global['MIDWAY_MAIN_FRAMEWORK'] = this.mainFramework =

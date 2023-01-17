@@ -1,5 +1,5 @@
 import { ViewManager } from './viewManager';
-import { Provide, Inject, Config, Utils } from '@midwayjs/decorator';
+import { Provide, Inject, Config, Utils } from '@midwayjs/core';
 import * as assert from 'assert';
 import { normalize, extname } from 'path';
 import { IViewEngine, RenderOptions } from './interface';
@@ -85,6 +85,7 @@ export class ContextView implements IViewEngine {
 
   private setLocals(locals) {
     return Object.assign(
+      {},
       this.viewManager.getLocals(),
       {
         ctx: this.ctx,

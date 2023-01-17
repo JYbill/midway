@@ -10,15 +10,12 @@ import {
   CommonMiddlewareUnion,
   FunctionMiddleware,
   MidwayWebRouterService,
-} from '@midwayjs/core';
-
-import {
   Framework,
   WEB_RESPONSE_CONTENT_TYPE,
   WEB_RESPONSE_HEADER,
   WEB_RESPONSE_HTTP_CODE,
   WEB_RESPONSE_REDIRECT,
-} from '@midwayjs/decorator';
+} from '@midwayjs/core';
 import {
   IMidwayExpressApplication,
   IMidwayExpressConfigurationOptions,
@@ -222,6 +219,14 @@ export class MidwayExpressFramework extends BaseFramework<
    */
   protected generateController(routeInfo: RouterInfo): IRouterHandler<any> {
     return wrapAsyncHandler(async (req, res, next) => {
+      if (routeInfo.controllerClz && typeof routeInfo.method === 'string') {
+        const isPassed = await this.app
+          .getFramework()
+          .runGuard(req, routeInfo.controllerClz, routeInfo.method);
+        if (!isPassed) {
+          throw new httpError.ForbiddenError();
+        }
+      }
       let result;
       if (typeof routeInfo.method !== 'string') {
         result = await routeInfo.method(req, res, next);

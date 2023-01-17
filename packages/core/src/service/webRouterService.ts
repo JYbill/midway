@@ -1,7 +1,6 @@
 import {
   CONTROLLER_KEY,
   ControllerOption,
-  FaaSMetadata,
   getClassMetadata,
   getPropertyDataFromClass,
   getPropertyMetadata,
@@ -11,13 +10,13 @@ import {
   Provide,
   RouterOption,
   Scope,
-  ScopeEnum,
-  ServerlessTriggerType,
-  Types,
   WEB_RESPONSE_KEY,
   WEB_ROUTER_KEY,
   WEB_ROUTER_PARAM_KEY,
-} from '@midwayjs/decorator';
+  ScopeEnum,
+  FaaSMetadata,
+  ServerlessTriggerType,
+} from '../decorator';
 import { joinURLPath } from '../util';
 import {
   MidwayCommonError,
@@ -26,6 +25,7 @@ import {
 } from '../error';
 import * as util from 'util';
 import { PathToRegexpUtil } from '../util/pathToRegexp';
+import { Types } from '../util/types';
 
 const debug = util.debuglog('midway:debug');
 
@@ -74,6 +74,10 @@ export interface RouterInfo {
    * controller provideId
    */
   controllerId?: string;
+  /**
+   * controller class
+   */
+  controllerClz?: new (...args) => any;
   /**
    * router middleware
    */
@@ -151,8 +155,6 @@ export class MidwayWebRouterService {
   private isReady = false;
   protected routes = new Map<string, RouterInfo[]>();
   protected routesPriority: RouterPriority[] = [];
-  private cachedFlattenRouteList;
-  private includeCompileUrlPattern = false;
 
   constructor(readonly options: RouterCollectorOptions = {}) {}
 
@@ -210,11 +212,36 @@ export class MidwayWebRouterService {
   public addController(
     controllerClz: any,
     controllerOption: ControllerOption,
+    functionMeta?: boolean
+  );
+  public addController(
+    controllerClz: any,
+    controllerOption: ControllerOption,
+    resourceOptions?: {
+      resourceFilter: (routerInfo: RouterInfo) => boolean;
+    },
+    functionMeta?: boolean
+  );
+  public addController(
+    controllerClz: any,
+    controllerOption: ControllerOption,
+    resourceOptions: any = {},
     functionMeta = false
   ) {
+    if (resourceOptions && typeof resourceOptions === 'boolean') {
+      functionMeta = resourceOptions;
+      resourceOptions = undefined;
+    }
+
+    if (!resourceOptions) {
+      resourceOptions = {};
+    }
+
     const controllerId = getProviderName(controllerClz);
     debug(`[core]: Found Controller ${controllerId}.`);
     const id = getProviderUUId(controllerClz);
+
+    controllerOption.routerOptions = controllerOption.routerOptions || {};
 
     let priority;
     // implement middleware in controller
@@ -309,6 +336,7 @@ export class MidwayWebRouterService {
           handlerName: `${controllerId}.${webRouter.method}`,
           funcHandlerName: `${controllerId}.${webRouter.method}`,
           controllerId,
+          controllerClz,
           middleware: webRouter.middleware || [],
           controllerMiddleware: middleware || [],
           requestMetadata: routeArgsInfo,
@@ -327,6 +355,12 @@ export class MidwayWebRouterService {
             functionName: data.functionName,
           };
         }
+        if (
+          resourceOptions.resourceFilter &&
+          !resourceOptions.resourceFilter(data)
+        ) {
+          continue;
+        }
 
         this.checkDuplicateAndPush(data.prefix, data);
       }
@@ -335,7 +369,6 @@ export class MidwayWebRouterService {
 
   /**
    * dynamically add a route to root prefix
-   * @param routerPath
    * @param routerFunction
    * @param routerInfoOption
    */
@@ -366,6 +399,9 @@ export class MidwayWebRouterService {
         method: routerFunction,
       })
     );
+
+    // sort again
+    this.sortPrefixAndRouter();
   }
 
   public sortRouter(urlMatchList: RouterInfo[]) {
@@ -456,23 +492,8 @@ export class MidwayWebRouterService {
   public async getFlattenRouterTable(
     options: {
       compileUrlPattern?: boolean;
-      noCache?: boolean;
     } = {}
   ): Promise<RouterInfo[]> {
-    if (this.cachedFlattenRouteList && !options.noCache) {
-      if (options.compileUrlPattern && !this.includeCompileUrlPattern) {
-        this.includeCompileUrlPattern = true;
-        // attach match pattern function
-        for (const item of this.cachedFlattenRouteList) {
-          if (item.fullUrlFlattenString) {
-            item.fullUrlCompiledRegexp = PathToRegexpUtil.toRegexp(
-              item.fullUrlFlattenString
-            );
-          }
-        }
-      }
-      return this.cachedFlattenRouteList;
-    }
     if (!this.isReady) {
       await this.analyze();
       this.isReady = true;
@@ -482,7 +503,6 @@ export class MidwayWebRouterService {
       routeArr = routeArr.concat(this.routes.get(routerPriority.prefix));
     }
     if (options.compileUrlPattern) {
-      this.includeCompileUrlPattern = true;
       // attach match pattern function
       for (const item of routeArr) {
         if (item.fullUrlFlattenString) {
@@ -492,7 +512,6 @@ export class MidwayWebRouterService {
         }
       }
     }
-    this.cachedFlattenRouteList = routeArr;
     return routeArr;
   }
 

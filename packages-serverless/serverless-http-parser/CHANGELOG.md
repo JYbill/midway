@@ -3,6 +3,28 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [3.6.0](https://github.com/midwayjs/midway/compare/v3.5.3...v3.6.0) (2022-10-10)
+
+
+### Features
+
+* add guard ([#2345](https://github.com/midwayjs/midway/issues/2345)) ([1b952a1](https://github.com/midwayjs/midway/commit/1b952a1b09adbb88ff3cff9a2974eb1e37ce53a5))
+
+
+
+
+
+## [3.5.3](https://github.com/midwayjs/midway/compare/v3.5.2...v3.5.3) (2022-09-25)
+
+
+### Bug Fixes
+
+* path parameters set ([#2314](https://github.com/midwayjs/midway/issues/2314)) ([cf1b441](https://github.com/midwayjs/midway/commit/cf1b441fa1d80894e69ea6ac3bd159f04a0c6ba5))
+
+
+
+
+
 ## [3.5.2](https://github.com/midwayjs/midway/compare/v3.5.1...v3.5.2) (2022-09-08)
 
 

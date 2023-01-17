@@ -23,6 +23,7 @@
         "req_res_app",
         "service",
         "error_filter",
+        "guard",
         "midway_component",
         "deployment"
       ]
@@ -53,6 +54,7 @@
       "label": "设计模式",
       "items": [
         "aspect",
+        "auto_run",
         "pipeline",
         "service_factory",
         "data_listener",
@@ -84,7 +86,7 @@
         "extensions/info",
         "extensions/validate",
         "extensions/swagger",
-        "extensions/task",
+        "extensions/bull",
         "extensions/jwt"
       ]
     },
@@ -101,9 +103,11 @@
         "extensions/render",
         "extensions/upload",
         "extensions/passport",
+        "extensions/casbin",
         "extensions/static_file",
         "extensions/cross_domain",
-        "extensions/http-proxy"
+        "extensions/http-proxy",
+        "extensions/captcha"
       ]
     },
     {
@@ -130,7 +134,8 @@
       "collapsible": false,
       "items": [
         "extensions/grpc",
-        "extensions/consul"
+        "extensions/consul",
+        "extensions/etcd"
       ]
     },
     {
@@ -278,6 +283,7 @@
         "tool/mwts",
         "tool/luckyeye",
         "tool/typeorm_generator",
+        "tool/sequelize_generator",
         "tool/egg-ts-helper"
       ]
     },
@@ -300,6 +306,7 @@
         "faq/git_problem",
         "faq/npm_problem",
         "faq/ts_problem",
+        "faq/alias_path",
         "how_to_install_nodejs",
         "how_to_update_midway",
         "midway_slow_problem"

@@ -1,6 +1,6 @@
 {
   "name": "@midwayjs/grpc",
-  "version": "3.5.1",
+  "version": "3.9.0",
   "description": "Midway Framework for gRPC",
   "main": "dist/index",
   "typings": "index.d.ts",
@@ -24,14 +24,13 @@
   ],
   "license": "MIT",
   "devDependencies": {
-    "@midwayjs/decorator": "^3.4.11",
-    "@midwayjs/mock": "^3.5.1",
-    "fs-extra": "10.0.1"
+    "@midwayjs/mock": "^3.9.0",
+    "fs-extra": "10.1.0"
   },
   "dependencies": {
-    "@grpc/grpc-js": "1.6.12",
-    "@grpc/proto-loader": "0.7.2",
-    "@midwayjs/core": "^3.5.1",
+    "@grpc/grpc-js": "1.8.1",
+    "@grpc/proto-loader": "0.7.4",
+    "@midwayjs/core": "^3.9.0",
     "@midwayjs/logger": "^2.15.0"
   },
   "engines": {
@@ -40,7 +39,7 @@
   "author": "Harry Chen <czy88840616@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "http://github.com/midwayjs/midway.git"
+    "url": "https://github.com/midwayjs/midway.git"
   },
   "gitHead": "a603d2348d6141f8f723901498f03a162a037708"
 }

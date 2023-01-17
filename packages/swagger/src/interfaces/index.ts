@@ -191,7 +191,7 @@ export interface TagObject {
 export type ExamplesObject = Record<string, ExampleObject | ReferenceObject>;
 
 export interface ReferenceObject {
-  $ref: string;
+  $ref: string | (() => string);
 }
 
 export interface SchemaObject {
@@ -204,7 +204,7 @@ export interface SchemaObject {
   example?: any;
   examples?: any[] | Record<string, any>;
   deprecated?: boolean;
-  type?: string;
+  type?: string | (new (...args) => any) | (() => new (...args) => any);
   allOf?: (SchemaObject | ReferenceObject)[];
   oneOf?: (SchemaObject | ReferenceObject)[];
   anyOf?: (SchemaObject | ReferenceObject)[];

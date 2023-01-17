@@ -7,8 +7,9 @@ import {
   Inject,
   ScopeEnum,
   listModule,
-} from '@midwayjs/decorator';
-import { DataSourceManager, ILogger } from '@midwayjs/core';
+  DataSourceManager,
+  ILogger,
+} from '@midwayjs/core';
 import { Sequelize } from 'sequelize-typescript';
 
 @Provide()
@@ -49,7 +50,7 @@ export class SequelizeDataSourceManager extends DataSourceManager<Sequelize> {
     await client.authenticate();
 
     if (config.sync) {
-      await client.sync();
+      await client.sync(config.syncOptions);
     }
 
     this.coreLogger.info('[midway:sequelize] connecting and start');

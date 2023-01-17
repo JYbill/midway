@@ -1,11 +1,9 @@
-import type {
+import {
   IMiddleware,
   IMidwayApplication,
   IMidwayContext,
   NextFunction,
-} from '@midwayjs/core';
-import { safeRequire } from '@midwayjs/core';
-import {
+  safeRequire,
   Config,
   Init,
   Inject,
@@ -13,7 +11,7 @@ import {
   Scope,
   ScopeEnum,
   MidwayFrameworkType,
-} from '@midwayjs/decorator';
+} from '@midwayjs/core';
 import { readFileSync } from 'fs';
 import { join, extname } from 'path';
 import type { SwaggerOptions } from './interfaces';
@@ -60,13 +58,14 @@ export class SwaggerMiddleware
           lastName = 'index.html';
         }
 
-        let content = readFileSync(join(this.swaggerUiAssetPath, lastName), {
-          encoding: 'utf-8',
-        });
+        let content: Buffer | string = readFileSync(
+          join(this.swaggerUiAssetPath, lastName)
+        );
         if (
           lastName === 'index.html' ||
           lastName === 'swagger-initializer.js'
         ) {
+          content = content.toString('utf8');
           content = this.replaceInfo(content);
         }
         const ext = extname(lastName);
@@ -101,13 +100,14 @@ export class SwaggerMiddleware
           lastName = 'index.html';
         }
 
-        let content = readFileSync(join(this.swaggerUiAssetPath, lastName), {
-          encoding: 'utf-8',
-        });
+        let content: Buffer | string = readFileSync(
+          join(this.swaggerUiAssetPath, lastName)
+        );
         if (
           lastName === 'index.html' ||
           lastName === 'swagger-initializer.js'
         ) {
+          content = content.toString('utf8');
           content = this.replaceInfo(content);
         }
         const ext = extname(lastName);

@@ -1,4 +1,4 @@
-import { Inject, Provide, ServerlessTrigger, ServerlessTriggerType } from '@midwayjs/decorator';
+import { Inject, Provide, ServerlessTrigger, ServerlessTriggerType } from '@midwayjs/core';
 
 @Provide()
 export class HelloService {
@@ -6,8 +6,8 @@ export class HelloService {
   ctx: any; // context
 
   @ServerlessTrigger(ServerlessTriggerType.EVENT)
-  async handler() {
-    return 'hello event' + this.ctx.getAttr('result');
+  async handler(event) {
+    return 'hello event' + this.ctx.getAttr('result') + event.text;
   }
 
   @ServerlessTrigger(ServerlessTriggerType.HTTP, {

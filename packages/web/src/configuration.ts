@@ -4,9 +4,10 @@ import {
   Inject,
   Init,
   WEB_ROUTER_PARAM_KEY,
-} from '@midwayjs/decorator';
+  extractKoaLikeValue,
+  MidwayDecoratorService,
+} from '@midwayjs/core';
 import { IMidwayWebApplication } from './interface';
-import { extractKoaLikeValue, MidwayDecoratorService } from '@midwayjs/core';
 import { join } from 'path';
 
 @Configuration({
@@ -34,7 +35,8 @@ export class EggConfiguration {
         return extractKoaLikeValue(
           options.metadata.type,
           options.metadata.propertyData,
-          options.originParamType
+          options.originParamType,
+          options.metadata?.pipes
         )(options.originArgs[0], options.originArgs[1]);
       }
     );

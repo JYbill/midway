@@ -1,19 +1,22 @@
 {
   "name": "@midwayjs/typeorm",
-  "version": "3.5.1",
+  "version": "3.9.5",
   "main": "dist/index",
   "typings": "index.d.ts",
+  "bin": {
+    "mwtypeorm": "./cli.js"
+  },
   "files": [
     "dist/**/*.js",
     "dist/**/*.d.ts",
+    "cli.js",
     "index.d.ts"
   ],
   "devDependencies": {
-    "@midwayjs/core": "^3.5.1",
-    "@midwayjs/decorator": "^3.4.11",
-    "@midwayjs/mock": "^3.5.1",
-    "sqlite3": "5.0.11",
-    "typeorm": "0.3.9"
+    "@midwayjs/core": "^3.9.0",
+    "@midwayjs/mock": "^3.9.0",
+    "sqlite3": "5.1.4",
+    "typeorm": "0.3.11"
   },
   "author": {
     "name": "czy88840616",
@@ -30,6 +33,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "http://github.com/midwayjs/midway.git"
+    "url": "https://github.com/midwayjs/midway.git"
   }
 }

@@ -20,7 +20,7 @@ import {
   getPropertyType,
   RequestMethod,
   getClassExtendedMetadata,
-} from '@midwayjs/decorator';
+} from '@midwayjs/core';
 import { PathItemObject, Type } from './interfaces';
 import { DECORATORS } from './constants';
 import { DocumentBuilder } from './documentBuilder';
@@ -288,8 +288,11 @@ export class SwaggerExplorer {
     }
     const parameters = [];
     opts[webRouter.requestMethod] = {
-      summary: operMeta?.metadata?.summary,
-      description: operMeta?.metadata?.description,
+      summary: getNotEmptyValue(operMeta?.metadata?.summary, webRouter.summary),
+      description: getNotEmptyValue(
+        operMeta?.metadata?.description,
+        webRouter.description
+      ),
       // operationId: `${webRouter.requestMethod}_${(operMeta?.metadata?.operationId || webRouter.method)}`,
       tags: operMeta?.metadata?.tags || [],
     };
@@ -327,9 +330,24 @@ export class SwaggerExplorer {
       if (Types.isClass(currentType)) {
         this.parseClzz(currentType);
 
-        p.schema = {
-          $ref: '#/components/schemas/' + currentType.name,
-        };
+        if (p.in === 'query') {
+          // 如果@Query()装饰的 是一个对象，则把该对象的子属性作为多个@Query参数
+          const schema = this.documentBuilder.getSchema(currentType.name);
+          Object.keys(schema.properties).forEach(pName => {
+            const ppt: any = schema.properties[pName];
+            const pp = {
+              name: pName,
+              in: p.in,
+            };
+            this.parseFromParamsToP({ metadata: ppt }, pp);
+            parameters.push(pp);
+          });
+          continue;
+        } else {
+          p.schema = {
+            $ref: '#/components/schemas/' + currentType.name,
+          };
+        }
       } else {
         p.schema = {
           type: convertSchemaType(currentType?.name ?? currentType),
@@ -610,13 +628,124 @@ export class SwaggerExplorer {
       }
     }
   }
+
+  protected parseSubPropertyType(metadata: any) {
+    let typeMeta;
+    if (metadata?.enum) {
+      typeMeta = {
+        type: metadata?.type,
+        enum: metadata?.enum,
+        default: metadata?.default,
+      };
+
+      if (metadata?.description) {
+        typeMeta.description = metadata?.description;
+      }
+      return typeMeta;
+    }
+
+    if (metadata?.items?.enum) {
+      typeMeta = {
+        type: metadata?.type,
+        items: metadata?.items,
+        default: metadata?.default,
+      };
+
+      if (metadata?.description) {
+        typeMeta.description = metadata?.description;
+      }
+      return typeMeta;
+    }
+
+    let isArray = false;
+    let currentType = parseTypeSchema(metadata?.type);
+
+    delete metadata?.type;
+
+    if (currentType === 'array') {
+      isArray = true;
+      currentType = parseTypeSchema(metadata?.items?.type);
+
+      delete metadata?.items.type;
+    }
+
+    if (metadata?.oneOf) {
+      typeMeta = {
+        oneOf: [],
+      };
+      metadata?.oneOf.forEach((item: any) => {
+        typeMeta.push(this.parseSubPropertyType(item));
+      });
+      delete metadata?.oneOf;
+    }
+
+    if (Types.isClass(currentType)) {
+      this.parseClzz(currentType);
+
+      if (isArray) {
+        typeMeta = {
+          type: 'array',
+          items: {
+            $ref: '#/components/schemas/' + currentType?.name,
+          },
+        };
+      } else {
+        typeMeta = {
+          $ref: '#/components/schemas/' + currentType?.name,
+        };
+      }
+
+      delete metadata.items;
+    } else {
+      if (isArray) {
+        // 没有配置类型则认为自己配置了 items 内容
+        if (!currentType) {
+          if (metadata?.items?.['$ref']) {
+            metadata.items['$ref'] = parseTypeSchema(metadata.items['$ref']);
+          }
+
+          typeMeta = {
+            type: 'array',
+            items: metadata?.items,
+          };
+        } else {
+          typeMeta = {
+            type: 'array',
+            items: {
+              type: convertSchemaType(currentType?.name || currentType),
+            },
+          };
+        }
+
+        delete metadata.items;
+      } else {
+        typeMeta = {
+          type: currentType,
+          format: metadata?.format,
+        };
+
+        // Date 类型支持
+        if (typeMeta.type === 'Date') {
+          typeMeta.type = 'string';
+          if (!typeMeta.format) {
+            typeMeta.format = 'date';
+          }
+        }
+
+        delete metadata.format;
+      }
+    }
+
+    return Object.assign(typeMeta, metadata);
+  }
+
   /**
    * 解析类型的 ApiProperty
    * @param clzz
    */
-  private parseClzz(clzz: Type) {
+  protected parseClzz(clzz: Type) {
     if (this.documentBuilder.getSchema(clzz.name)) {
-      return;
+      return this.documentBuilder.getSchema(clzz.name);
     }
     this.parseExtraModel(clzz);
 
@@ -665,15 +794,26 @@ export class SwaggerExplorer {
           return;
         }
         let isArray = false;
-        let currentType = metadata?.type;
+        let currentType = parseTypeSchema(metadata?.type);
 
         delete metadata?.type;
 
         if (currentType === 'array') {
           isArray = true;
-          currentType = metadata?.items?.type;
+          currentType = parseTypeSchema(metadata?.items?.type);
 
           delete metadata?.items.type;
+        }
+
+        if (metadata?.oneOf) {
+          tt.properties[key] = {
+            oneOf: [],
+          };
+          metadata?.oneOf.forEach((meta: any) => {
+            tt.properties[key].oneOf.push(this.parseSubPropertyType(meta));
+          });
+          delete metadata?.oneOf;
+          return;
         }
 
         if (Types.isClass(currentType)) {
@@ -697,6 +837,12 @@ export class SwaggerExplorer {
           if (isArray) {
             // 没有配置类型则认为自己配置了 items 内容
             if (!currentType) {
+              if (metadata?.items?.['$ref']) {
+                metadata.items['$ref'] = parseTypeSchema(
+                  metadata.items['$ref']
+                );
+              }
+
               tt.properties[key] = {
                 type: 'array',
                 items: metadata?.items,
@@ -713,7 +859,7 @@ export class SwaggerExplorer {
             delete metadata.items;
           } else {
             tt.properties[key] = {
-              type: getPropertyType(clzz.prototype, key).name,
+              type: currentType ?? getPropertyType(clzz.prototype, key).name,
               format: metadata?.format,
             };
 
@@ -736,6 +882,9 @@ export class SwaggerExplorer {
     this.documentBuilder.addSchema({
       [clzz.name]: tt,
     });
+
+    // just for test
+    return tt;
   }
   /**
    * 授权验证
@@ -861,5 +1010,29 @@ function convertSchemaType(value) {
       return 'string';
     default:
       return value;
+  }
+}
+
+function getNotEmptyValue(...args) {
+  for (const arg of args) {
+    if (arg) {
+      return arg;
+    }
+  }
+}
+
+function parseTypeSchema(ref) {
+  switch (ref) {
+    case String:
+      return 'string';
+    case Number:
+      return 'number';
+    case Boolean:
+      return 'boolean';
+    default:
+      if (typeof ref === 'function' && !Types.isClass(ref)) {
+        ref = ref();
+      }
+      return ref;
   }
 }

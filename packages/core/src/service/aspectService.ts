@@ -1,17 +1,17 @@
+import * as pm from 'picomatch';
+import { IMidwayContainer } from '../interface';
 import {
   ASPECT_KEY,
   AspectMetadata,
   getClassMetadata,
   IMethodAspect,
-  Types,
+  JoinPoint,
   listModule,
   Provide,
   Scope,
   ScopeEnum,
-  JoinPoint,
-} from '@midwayjs/decorator';
-import * as pm from 'picomatch';
-import { IMidwayContainer } from '../interface';
+} from '../decorator';
+import { Types } from '../util/types';
 
 @Provide()
 @Scope(ScopeEnum.Singleton)
@@ -50,10 +50,7 @@ export class MidwayAspectService {
     }
   }
 
-  private async addAspect(
-    aspectIns: IMethodAspect,
-    aspectData: AspectMetadata
-  ) {
+  public async addAspect(aspectIns: IMethodAspect, aspectData: AspectMetadata) {
     const module = aspectData.aspectTarget;
     const names = Object.getOwnPropertyNames(module.prototype);
     const isMatch = aspectData.match ? pm(aspectData.match) : () => true;

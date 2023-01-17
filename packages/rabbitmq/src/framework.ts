@@ -8,8 +8,9 @@ import {
   MSListenerType,
   RabbitMQListenerOptions,
   Framework,
-} from '@midwayjs/decorator';
-import { BaseFramework } from '@midwayjs/core';
+  BaseFramework,
+  MidwayInvokeForbiddenError,
+} from '@midwayjs/core';
 import {
   IMidwayRabbitMQApplication,
   IMidwayRabbitMQConfigurationOptions,
@@ -91,6 +92,15 @@ export class MidwayRabbitMQFramework extends BaseFramework<
                 },
               } as IMidwayRabbitMQContext;
               this.app.createAnonymousContext(ctx);
+              const isPassed = await this.app
+                .getFramework()
+                .runGuard(ctx, module, listenerOptions.propertyKey);
+              if (!isPassed) {
+                throw new MidwayInvokeForbiddenError(
+                  listenerOptions.propertyKey,
+                  module
+                );
+              }
               const ins = await ctx.requestContext.getAsync(module);
               const fn = await this.applyMiddleware(async ctx => {
                 return await ins[listenerOptions.propertyKey].call(ins, data);

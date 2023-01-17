@@ -1,6 +1,6 @@
 # TypeORM
 
-[TypeORM](https://github.com/typeorm/typeorm) 是 `node.js` 现有社区最成熟的对象关系映射器（`ORM` ）。Midway 和 TypeORM 搭配，使开发更简单。
+[TypeORM](https://github.com/typeorm/typeorm) 是 `node.js` 现有社区最成熟的对象关系映射器（`ORM` ）。本文介绍如何在 Midway 中使用 TypeORM 。
 
 :::tip
 
@@ -15,6 +15,8 @@
 | 可用于标准项目    | ✅    |
 | 可用于 Serverless | ✅    |
 | 可用于一体化      | ✅    |
+| 包含独立主框架    | ❌    |
+| 包含独立日志      | ❌    |
 
 
 
@@ -26,7 +28,7 @@
 - 2、在 `src/config.default` 的部分配置调整
   - 2.1 配置文件中的 key 不同 （orm => typeorm）
   - 2.2修改为数据源的形式 `typeorm.dataSource`
-  - 2.3 实体模型需要在数据源的 `entities` 字段中声明
+  - 2.3 实体模型类或者实体模型类的路径,需要在数据源的 `entities` 字段中声明
   - 2.4 Subscriber 需要在数据源的 `subscribers` 字段中声明
 - 3、不再使用 `EntityModel` 装饰器，直接使用 typeorm 提供的能力
 
@@ -114,8 +116,13 @@ npm install mongodb --save
 ```
 
 :::info
-To make the** Oracle driver work**, you need to follow the installation instructions from [their](https://github.com/oracle/node-oracledb) site.
+
+-  Oracle driver 比较特殊，需要查看 [文档](https://github.com/oracle/node-oracledb) 
+- 不建议使用 typeorm 链接 mongodb，请使用 mongoose 组件
+
 :::
+
+
 
 
 ## 简单的目录结构
@@ -357,7 +364,6 @@ export class Photo {
 
   @Column()
   isPublished: boolean;
-
 }
 ```
 
@@ -379,6 +385,15 @@ name: string;
 - `@UpdateDateColumn` 是一个特殊列，在每次调用实体管理器或存储库的save时，自动更新实体日期。
 - `@VersionColumn` 是一个特殊列，在每次调用实体管理器或存储库的save时自动增长实体版本（增量编号）。
 - `@DeleteDateColumn` 是一个特殊列，会在调用 soft-delete（软删除）时自动设置实体的删除时间。
+
+比如：
+
+```typescript
+  @CreateDateColumn({
+    type: 'timestamp',
+  })
+  createdDate: Date;
+```
 
 列类型是特定于数据库的。您可以设置数据库支持的任何列类型。有关支持的列类型的更多信息，请参见[此处](https://github.com/typeorm/typeorm/blob/master/docs/entities.md#column-types)。
 
@@ -416,37 +431,33 @@ export default {
         username: '',
         password: '',
         database: undefined,
-        synchronize: false,		// 如果第一次使用，不存在表，有同步的需求可以写 true
+        synchronize: false,		// 如果第一次使用，不存在表，有同步的需求可以写 true，注意会丢数据
         logging: false,
         
         // 配置实体模型
         entities: [Photo],
+        
+        // 或者扫描形式
+        entities: [
+          '*/entity/*.entity{.ts,.js}'
+        ]
       }
     }
   },
 }
 ```
+:::tip
+
+如果使用的数据库已经有表结构同步的功能，比如云数据库，最好不要开启。如果一定要使用，synchronize 配置最好仅在开发阶段，或者第一次使用，避免造成一致性问题。
+
+:::
+
 如需以目录扫描形式关联，请参考 [数据源管理](../data_source)。
 
-默认存储的是 utc 时间（推荐），也可以配置时区（不建议）
-
-```typescript
-// src/config/config.default.ts
-export default {
-  // ...
-  typeorm: {
-    dataSource: {
-      default: {
-        // ...
-        timezone: '+08:00',
-      }
-    }
-  },
-}
-```
 
 
-这个 `type` 字段你可以使用其他的数据库类型，包括`mysql`, `mariadb`, `postgres`, `cockroachdb`, `sqlite`, `mssql`, `oracle`, `cordova`, `nativescript`, `react-native`, `expo`, or `mongodb`
+
+ `type` 字段你可以使用其他的数据库类型，包括`mysql`, `mariadb`, `postgres`, `cockroachdb`, `sqlite`, `mssql`, `oracle`, `cordova`, `nativescript`, `react-native`, `expo`, or `mongodb`
 
 
  比如 sqlite，需要以下信息。
@@ -622,13 +633,11 @@ export class PhotoService {
 
   async updatePhoto() {
     /*...*/
-    let photoToRemove = await this.photoModel.findOne({
+    await this.photoModel.remove({
       where: {
         id: 1
       }
     });
-    
-    await photoToRemove.remove();
   }
 }
 ```
@@ -1000,8 +1009,7 @@ export class Photo {
 
 
 ```typescript
-import { Entity } from 'typeorm';
-import { PrimaryGeneratedColumn, Column, ManyToMany, JoinTable } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable } from "typeorm";
 
 @Entity()
 export class Album {
@@ -1274,9 +1282,66 @@ export class XXX {
 
 
 
+### 列值转换
+
+我们可以在实体定义中处理列值转换。
+
+利用列装饰器的 `transformer` 参数，可以进行出入参的处理，比如对时间格式化。
+
+```typescript
+import { Entity, Column, CreateDateColumn, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import * as dayjs from 'dayjs';
+
+const dateTransformer = {
+  from: (value: Date | number) => {
+    return dayjs(typeof value === 'number' ? value: value.getTime()).format('YYYY-MM-DD HH:mm:ss');
+  },
+  to: () => new Date(),
+};
+
+@Entity()
+export class Photo {
+  // ...
+
+  @CreateDateColumn({
+    type: 'timestamp',
+    transformer: dateTransformer,
+  })
+  createdAt: Date;
+}
+
+```
 
 
-### 获取连接池
+
+### 指定默认数据源
+
+在包含多个数据源时，可以指定默认的数据源。
+
+```typescript
+export default {
+  // ...
+  typeorm: {
+    dataSource: {
+      default1: {
+        // ...
+      },
+      default2: {
+        // ...
+      },
+    },
+    // 多个数据源时可以用这个指定默认的数据源
+    defaultDataSourceName: 'default1',
+  },
+};
+```
+
+
+
+### 获取数据源
+
+数据源即创建出的 DataSource 对象，我们可以通过注入内置的数据源管理器来获取。
+
 ```typescript
 import { Configuration } from '@midwayjs/decorator';
 import { TypeORMDataSourceManager } from '@midwayjs/typeorm';
@@ -1290,6 +1355,32 @@ export class MainConfiguration {
     const dataSourceManager = await container.getAsync(TypeORMDataSourceManager);
   	const conn = dataSourceManager.getDataSource('default');
     console.log(dataSourceManager.isConnected(conn));
+  }
+}
+```
+
+从 v3.8.0 开始，也可以通过装饰器注入。
+
+```typescript
+import { Configuration } from '@midwayjs/decorator';
+import { InjectDataSource } from '@midwayjs/typeorm';
+import { DataSource } from 'typeorm';
+
+@Configuration({
+  // ...
+})
+export class MainConfiguration {
+  
+  // 注入默认数据源
+  @InjectDataSource()
+  defaultDataSource: DataSource;
+  
+  // 注入自定义数据源
+  @InjectDataSource('default1')
+  customDataSource: DataSource;
+
+  async onReady(container: IMidwayContainer) {
+    // ...
   }
 }
 ```
@@ -1319,7 +1410,7 @@ export class UserService {
     // start transaction
     await dataSource.transaction(async (transactionalEntityManager) => {
       // run code
-      await transactionalEntityManager.save(user)
+      await transactionalEntityManager.save(UserDTO, user);
     });
   }
   
@@ -1330,11 +1421,71 @@ export class UserService {
 
 
 
+### CLI
+
+TypeORM 默认提供了一个 CLI，用来创建 entity，migration 等，更多文档请查看 [这里](https://github.com/typeorm/typeorm/blob/master/docs/zh_CN/using-cli.md)。
+
+由于 TypeORM 的默认配置和 Midway 不同，我们提供了一个简单的修改版本，用于适配 Midway 的数据源配置。
+
+检查安装情况：
+
+```bash
+$ npx mwtypeorm -h
+```
+
+常用的命令有
+
+ **创建空 Entity**
+
+将会创建一个 `src/entity/User.ts` 文件。
+
+```bash
+$ npx mwtypeorm entity:create src/entity/User
+```
+
+**创建 Migration**
+
+将会根据现有数据源生成一个 `src/migration/******-photo.ts` 文件。
+
+比如配置如下：
+
+```typescript
+export default {
+  typeorm: {
+    dataSource: {
+      'default': {
+        // ...
+        entities: [
+          '*/entity/*.entity{.ts,.js}'
+        ],
+        migrations: [
+          '*/migration/*.ts'
+        ],
+      },
+  },
+}
+```
+
+可以执行下面的命令，将修改后的 Entity 生成迁移文件。
+
+```bash
+$ npx mwtypeorm migration:generate -d ./src/config/config.default.ts src/migration/photo
+```
+
+:::caution
+
+注意：上面的 entities 配置由于需要再 CLI 和 Midway 间复用，采用了两者都支持的扫描写法。
+
+:::
+
+
+
 ### 关于表结构同步
 
 
 - 如果你已有表结构，想自动创建 Entity，使用 [生成器](../tool/typeorm_generator)
-- 如果已经有 Entity 代码，想创建表结构请使用配置中的  `synchronize:  true` 。
+- 如果已经有 Entity 代码，想创建表结构请使用配置中的  `synchronize:  true` ，注意可能会丢失数据
+- 如果已经上线，但是又修改了表结构，可以使用 CLI 中的 `migration:generate`
 
 
 
@@ -1349,13 +1500,52 @@ export class UserService {
 $ sudo sysctl -w net.inet.tcp.sack=0
 ```
 
-### 关于 mysql 时间列的当前时区展示
 
 
-如果使用 `@UpdateDateColumn` 和 `@CreateDateColumn` 列，一般情况下，数据库中保存的是 UTC 时间，如果你希望返回当前时区的时间，可以使用下面的方式。
+### 关于 mysql 时间列的时区展示
+
+一般情况下，数据库中保存的是 UTC 时间，如果你希望返回当前时区的时间，可以使用下面的方式
+
+**1、检查 mysql 数据库所在的环境**
+
+比如下面默认的时区其实就是系统 UTC 时间，可以调整为 `+08:00`。
+
+```text
+mysql> show global variables like '%time_zone%';
++------------------+--------+
+| Variable_name    | Value  |
++------------------+--------+
+| system_time_zone | UTC    |
+| time_zone        | SYSTEM |
++------------------+--------+
+2 rows in set (0.05 sec)
+
+```
+
+**2、检查服务代码部署的环境**
+
+尽量和数据库所在的环境一致，如果不一致，请在配置中设置 `timezone` （设置为和 mysql 一致）。
+
+```typescript
+export default {
+  typeorm: {
+    dataSource: {
+      default: {
+        type: 'mysql',
+        // ...
+        timezone: '+08:00',
+      },
+    },
+  },
+}
+```
 
 
-在配置时，开启时间转字符串的选项。
+
+### 时间列返回字符串
+
+配置 dateStrings 可以使 mysql 返回时间按 DATETIME 格式返回，只对 mysql 生效。
+
 ```typescript
 // src/config/config.default.ts
 export default {
@@ -1371,26 +1561,15 @@ export default {
 }
 ```
 
+如果使用了 `@CreateDateColumn` 和 `@UpdateDateColumn` ，可以调整实体返回类型。
 
-实体中的时间列需要列类型。
 ```typescript
-@Entity()
-export class Photo {
-  //...
-  @UpdateDateColumn({
-    name: "gmt_modified",
-    type: 'timestamp'
-  })
-  gmtModified: Date;
-
   @CreateDateColumn({
-    name: "gmt_create",
-    type: 'timestamp'
+    type: 'timestamp',
   })
-  gmtCreate: Date;
-}
+  createdDate: string;
 ```
-这样，输出的时间字段就是当前的时区了。
+
 
 
 效果如下：
@@ -1402,36 +1581,10 @@ gmtModified: 2021-12-13T03:49:43.000Z,
 gmtCreate: 2021-12-13T03:49:43.000Z
 ```
 **配置后：**
+
 ```typescript
-gmtModified: '2021-12-13 11:49:43',
+gmtModified: '2021-12-13 11:49:43.725949',
 gmtCreate: '2021-12-13 11:49:43'
-```
-
-
-
-
-### 关于时间列的默认值
-
-
-如果使用 `@UpdateDateColumn` 和 `@CreateDateColumn` 列，那么注意，typeorm 是在建表语句中自动添加了默认值，如果表是用户自建的，该字段会由于没有默认值而写入 00:00:00 的时间。
-
-
-解决方案有两个 **1、修改表的默认值**  或者 **2、修改代码中列的默认值**
-
-**如果不想修改表，而想修改代码，请参考下面的代码。**
-
-```typescript
-@Column({
-  default: () => "NOW()",
-  type: 'timestamp'
-})
-createdOn: Date;
-
-@Column({
-  default: () => "NOW()",
-  type: 'timestamp'
-})
-modifiedOn: Date;
 ```
 
 
@@ -1446,7 +1599,7 @@ modifiedOn: Date;
 // src/config/config.default.ts
 export default {
   // ...
-  orm: {
+  typeorm: {
     dataSource: {
       default: {
         //...
@@ -1457,4 +1610,14 @@ export default {
   },
 }
 ```
+
+ 
+
+
+###  Cannot read properties of undefined (reading 'getRepository')
+
+一般是配置不正确，可以考虑两方面的配置：
+
+- 1、检查 `config.default.ts` 中的 `entities` 配置是否正确
+- 2、检查 `configuration.ts` 文件，确认是否引入 orm
 

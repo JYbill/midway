@@ -114,7 +114,7 @@ export class MainConfiguration implements ILifeCycle {
   @App()
   koaApp: koa.Application;
 
-  @App(MidwayFrameworkType.WS)
+  @App('webSocket')
   wsApp: ws.Application;
 
   async onReady() {
@@ -125,6 +125,25 @@ export class MainConfiguration implements ILifeCycle {
 ```
 
 非主要的 Application，需要通过 `@App()` 装饰器的参数或者 [ApplicationManager](./built_in_service#midwayapplicationmanager) 来获取。
+
+ `@App()` 装饰器的参数为组件的 `namespace`。
+
+常见的 namespace 如下：
+
+| Package            | Namespace |
+| ------------------ | --------- |
+| @midwayjs/web      | egg       |
+| @midwayjs/koa      | koa       |
+| @midwayjs/express  | express   |
+| @midwayjs/grpc     | gRPC      |
+| @midwayjs/ws       | webSocket |
+| @midwayjs/socketio | socketIO  |
+| @midwayjs/faas     | faas      |
+| @midwayjs/kafka    | kafka     |
+| @midwayjs/rabbitmq | rabbitMQ  |
+| @midwayjs/bull     | bull      |
+
+
 
 ### getAppDir
 
@@ -284,6 +303,29 @@ export class HomeController {
 }
 ```
 
+除了显式声明外，在拦截器或者装饰器设计的时候，由于我们无法得知用户是否写了 ctx 属性，还可以通过内置的 `REQUEST_OBJ_CTX_KEY` 字段来获取。
+
+比如：
+
+```typescript
+import { Inject, Controller, Get } from '@midwayjs/decorator';
+import { REQUEST_OBJ_CTX_KEY } from '@midwayjs/core';
+import { Context } from '@midwayjs/koa';
+
+@Controller('/')
+export class HomeController {
+  
+  @Inject()
+  ctx: Context;
+
+  @Get('/')
+  async home() {
+    ctx.logger.info(this.ctx === this[REQUEST_OBJ_CTX_KEY]);
+    // => true
+  }
+}
+```
+
 
 
 ### requestContext
@@ -347,5 +389,4 @@ console.log(value);
 this.ctx.getLogger('custom');
 // => custom logger
 ```
-
 

@@ -6,13 +6,11 @@ import {
   LOGGER_KEY,
   PLUGIN_KEY,
   WEB_ROUTER_PARAM_KEY,
-} from '@midwayjs/decorator';
-import { MidwayFaaSFramework } from './framework';
-import {
   extractKoaLikeValue,
   MidwayDecoratorService,
   REQUEST_OBJ_CTX_KEY,
 } from '@midwayjs/core';
+import { MidwayFaaSFramework } from './framework';
 import * as DefaultConfig from './config.default';
 
 @Configuration({
@@ -60,7 +58,8 @@ export class FaaSConfiguration {
         return extractKoaLikeValue(
           options.metadata.type,
           options.metadata.propertyData,
-          options.originParamType
+          options.originParamType,
+          options.metadata?.pipes
         )(options.originArgs[0], options.originArgs[1]);
       }
     );

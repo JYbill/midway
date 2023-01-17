@@ -8,11 +8,36 @@ import {
   MidwayFrameworkType,
   safeRequire,
   MidwayContainer,
+  Configuration,
+  CONFIGURATION_KEY,
+  Framework,
+  Inject,
+  sleep,
+  IMidwayContainer,
+  LoggerFactory
 } from '../src';
 import { join } from 'path';
-import { Configuration, CONFIGURATION_KEY, Framework, Inject, sleep } from '@midwayjs/decorator';
 import * as http from 'http';
 import * as getRawBody from 'raw-body';
+import { loggers, LoggerOptions, IMidwayLogger } from '@midwayjs/logger';
+
+export class MidwayLoggerFactory extends LoggerFactory<IMidwayLogger, LoggerOptions> {
+  createLogger(name: string, options: LoggerOptions) {
+    return loggers.createLogger(name, options) as IMidwayLogger;
+  }
+  getLogger(loggerName: string) {
+    return loggers.getLogger(loggerName) as IMidwayLogger;
+  }
+
+  close(loggerName: string | undefined) {
+    loggers.close();
+  }
+
+  removeLogger(loggerName: string) {
+    loggers.removeLogger(loggerName);
+  }
+}
+
 
 /**
  * 任意一个数组中的对象，和预期的对象属性一致即可
@@ -133,9 +158,41 @@ export async function createLightFramework(baseDir: string = '', globalConfig: a
     imports,
     applicationContext: container,
     globalConfig,
+    loggerFactory: new MidwayLoggerFactory(),
   });
 
   return container.get(EmptyFramework);
+}
+
+export async function createFramework(baseDir: string = '', globalConfig: any = {}): Promise<IMidwayContainer> {
+  const container = new MidwayContainer();
+  const bindModuleMap: WeakMap<any, boolean> = new WeakMap();
+  // 这里设置是因为在 midway 单测中会不断的复用装饰器元信息，又不能清理缓存，所以在这里做一些过滤
+  container.onBeforeBind(target => {
+    bindModuleMap.set(target, true);
+  });
+
+  const originMethod = container.listModule;
+
+  container.listModule = key => {
+    const modules = originMethod.call(container, key);
+    if (key === CONFIGURATION_KEY) {
+      return modules;
+    }
+
+    return modules.filter((module: any) => {
+      return bindModuleMap.has(module);
+    });
+  };
+
+  return initializeGlobalApplicationContext({
+    baseDir,
+    imports: [
+      safeRequire(join(baseDir, 'configuration'))
+    ],
+    applicationContext: container,
+    globalConfig,
+  });
 }
 
 export async function createHttpServer(options?: {

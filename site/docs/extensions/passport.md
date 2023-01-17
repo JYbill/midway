@@ -1,26 +1,30 @@
 # 身份验证
 
-身份验证是大多数Web应用程序的重要组成部分。因此Midway封装了目前Nodejs中最流行的Passport库。
-Passport是通过称为策略的可扩展插件进行身份验证请求。Passport 不挂载路由或假设任何特定的数据库，这最大限度地提高了灵活性并允许开发人员做出应用程序级别的决策。
+身份验证是大多数 Web 应用程序的重要组成部分。因此 Midway 封装了目前 Nodejs 中最流行的 Passport 库。
 
 相关信息：
 
-| web 支持情况      |      |
-| ----------------- | ---- |
-| @midwayjs/koa     | ✅    |
-| @midwayjs/faas    | ✅    |
-| @midwayjs/web     | ✅    |
-| @midwayjs/express | ✅    |
+| web 支持情况      |     |
+| ----------------- | --- |
+| @midwayjs/koa     | ✅  |
+| @midwayjs/faas    | ✅  |
+| @midwayjs/web     | ✅  |
+| @midwayjs/express | ✅  |
 
 从 v3.4.0 开始 Midway 自行维护 passport，将不再需要引入社区包和类型包。
 
+## 一些概念
 
+passport 是社区使用较多的身份验证库，通过称为策略的可扩展插件进行身份验证请求。Passport 不挂载路由或假设任何特定的数据库，这最大限度地提高了灵活性并允许开发人员做出应用程序级别的决策。
 
+它本身包含几个部分：
 
-## 准备
+- 1、验证的策略，比如 jwt 验证，github 验证，oauth 验证等，passport 最为丰富的也是这块
+- 2、执行策略之后，中间件的逻辑处理和配置，比如成功或者失败后的跳转，报错等
 
+## 安装依赖
 
-1. 安装 `npm i @midwayjs/passport` 和相关依赖
+安装 `npm i @midwayjs/passport` 和相关策略依赖。
 
 ```bash
 ## 必选
@@ -62,38 +66,33 @@ $ npm i passport-jwt --save
 }
 ```
 
-
-
-## 使用
-
-这里我们以本地认证，和 Jwt 作为演示。
-
+## 启用组件
 
 首先启用组件。
 
 ```typescript
-// configuration.ts
+// src/configuration.ts
 
 import { join } from 'path';
-import * as jwt from '@midwayjs/jwt';
-import { ILifeCycle,} from '@midwayjs/core';
+import { ILifeCycle } from '@midwayjs/core';
 import { Configuration } from '@midwayjs/decorator';
 import * as passport from '@midwayjs/passport';
 
 @Configuration({
   imports: [
     // ...
-    jwt,
     passport,
   ],
   importConfigs: [join(__dirname, './config')],
 })
 export class MainConfiguration implements ILifeCycle {}
-
 ```
 
+## 策略示例
 
-## 示例：本地策略
+这里我们以使用本地认证策略，和 Jwt 策略作为演示。
+
+### 示例：本地策略
 
 我们可以通过 `@CustomStrategy` 和派生 `PassportStrategy` 来自启动一个策略。通过 validate 钩子来获取有效负载，并且此函数必须有返回值，其参数并不明确，可以参考对应的 Strategy 或者通过展开符打印查看。
 
@@ -130,8 +129,14 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
     return {};
   }
 }
-
 ```
+
+:::tip
+
+注意：validate 方法是社区策略 verify 的 Promise 化替代方法，你无需在最后传递 callback 参数。
+
+:::
+
 使用派生 `PassportMiddleware`出一个中间件。
 
 ```typescript
@@ -139,7 +144,7 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
 
 import { Inject, Middleware } from '@midwayjs/decorator';
 import { PassportMiddleware, AuthenticateOptions } from '@midwayjs/passport';
-import { LocalStrategy } from './strategy/local.strategy.ts'
+import { LocalStrategy } from './strategy/local.strategy.ts';
 
 @Middleware()
 export class LocalPassportMiddleware extends PassportMiddleware(LocalStrategy) {
@@ -155,11 +160,10 @@ export class LocalPassportMiddleware extends PassportMiddleware(LocalStrategy) {
 ```typescript
 // src/controller.ts
 import { Post, Inject, Controller } from '@midwayjs/decorator';
-import { LocalPassportMiddleware } from './middleware/local.middleware.ts'
+import { LocalPassportMiddleware } from './middleware/local.middleware.ts';
 
 @Controller('/')
 export class LocalController {
-
   @Post('/passport/local', { middleware: [LocalPassportMiddleware] })
   async localPassport() {
     console.log('local user: ', this.ctx.state.user);
@@ -168,7 +172,7 @@ export class LocalController {
 }
 ```
 
-使用curl 模拟一次请求。
+使用 curl 模拟一次请求。
 
 ```bash
 curl -X POST http://localhost:7001/passport/local -d '{"username": "demo", "password": "1234"}' -H "Content-Type: application/json"
@@ -176,14 +180,34 @@ curl -X POST http://localhost:7001/passport/local -d '{"username": "demo", "pass
 结果 {"username": "demo", "password": "1234"}
 ```
 
-
-
-## 示例：Jwt 策略
+### 示例：Jwt 策略
 
 首先需要 **额外安装** 依赖和策略：
 
 ```bash
 $ npm i @midwayjs/jwt passport-jwt --save
+```
+
+额外启用 jwt 组件。
+
+```typescript
+// configuration.ts
+
+import { join } from 'path';
+import * as jwt from '@midwayjs/jwt';
+import { ILifeCycle } from '@midwayjs/core';
+import { Configuration } from '@midwayjs/decorator';
+import * as passport from '@midwayjs/passport';
+
+@Configuration({
+  imports: [
+    // ...
+    jwt,
+    passport,
+  ],
+  importConfigs: [join(__dirname, './config')],
+})
+export class MainConfiguration implements ILifeCycle {}
 ```
 
 然后在配置中设置，默认未加密，请不要把敏感信息存放在 payload 中。
@@ -194,9 +218,9 @@ export default {
   // ...
   jwt: {
     secret: 'xxxxxxxxxxxxxx', // fs.readFileSync('xxxxx.key')
-    expiresIn: '2d'   // https://github.com/vercel/ms
+    expiresIn: '2d', // https://github.com/vercel/ms
   },
-}
+};
 ```
 
 ```typescript
@@ -207,10 +231,7 @@ import { Strategy, ExtractJwt } from 'passport-jwt';
 import { Config } from '@midwayjs/decorator';
 
 @CustomStrategy()
-export class JwtStrategy extends PassportStrategy(
-  Strategy,
-  'jwt'
-) {
+export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   @Config('jwt')
   jwtConfig;
 
@@ -225,15 +246,20 @@ export class JwtStrategy extends PassportStrategy(
     };
   }
 }
-
-
 ```
+
+:::tip
+
+注意：validate 方法是社区策略 verify 的 Promise 化替代方法，你无需在最后传递 callback 参数。
+
+:::
+
 ```typescript
 // src/middleware/jwt.middleware.ts
 
 import { Middleware } from '@midwayjs/decorator';
 import { PassportMiddleware, AuthenticateOptions } from '@midwayjs/passport';
-import { JwtStrategy } from '../strategy/jwt-strategy';
+import { JwtStrategy } from '../strategy/jwt.strategy';
 
 @Middleware()
 export class JwtPassportMiddleware extends PassportMiddleware(JwtStrategy) {
@@ -244,14 +270,13 @@ export class JwtPassportMiddleware extends PassportMiddleware(JwtStrategy) {
 ```
 
 ```typescript
-import { Post, Inject, Controller, } from '@midwayjs/decorator';
-import { Context } from '@midwayjs/koa'
+import { Post, Inject, Controller } from '@midwayjs/decorator';
+import { Context } from '@midwayjs/koa';
 import { JwtService } from '@midwayjs/jwt';
-import { JwtPassportMiddleware } from './middleware/jwt.middleware';
+import { JwtPassportMiddleware } from '../middleware/jwt.middleware';
 
 @Controller('/')
 export class JwtController {
-
   @Inject()
   jwt: JwtService;
 
@@ -297,29 +322,31 @@ curl http://127.0.0.1:7001/passport/jwt -H "Authorization: Bearer xxxxxxxxxxxxxx
 import { CustomStrategy, PassportStrategy } from '@midwayjs/passport';
 import { Strategy, StrategyOptions } from 'passport-github';
 
-const GITHUB_CLIENT_ID = 'xxxxxx', GITHUB_CLIENT_SECRET = 'xxxxxxxx';
+const GITHUB_CLIENT_ID = 'xxxxxx',
+  GITHUB_CLIENT_SECRET = 'xxxxxxxx';
 
 @CustomStrategy()
 export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
   async validate(...payload) {
     return payload;
   }
-  getStrategyOptions() {
+
+  getStrategyOptions(): StrategyOptions {
     return {
       clientID: GITHUB_CLIENT_ID,
       clientSecret: GITHUB_CLIENT_SECRET,
-      callbackURL: 'https://127.0.0.1:7001/auth/github/cb'
+      callbackURL: 'https://127.0.0.1:7001/auth/github/cb',
     };
   }
 }
-
 ```
+
 ```typescript
 // src/middleware/github.middleware.ts
 
-import { PassportMiddleware } from '@midwayjs/passport';
+import { AuthenticateOptions, PassportMiddleware } from '@midwayjs/passport';
 import { Middleware } from '@midwayjs/decorator';
-import { GithubStrategy } from './github-strategy.ts';
+import { GithubStrategy } from './githubStrategy';
 
 @Middleware()
 export class GithubPassportMiddleware extends PassportMiddleware(GithubStrategy) {
@@ -328,11 +355,12 @@ export class GithubPassportMiddleware extends PassportMiddleware(GithubStrategy)
   }
 }
 ```
+
 ```typescript
-// src/controoer/auth.controller.ts
+// src/controller/auth.controller.ts
 
 import { Controller, Get, Inject } from '@midwayjs/decorator';
-import { GithubPassportMiddleware } from './github.middleware';
+import { GithubPassportMiddleware } from '../../middleware/github';
 
 @Controller('/oauth')
 export class AuthController {
@@ -347,10 +375,7 @@ export class AuthController {
     return this.ctx.state.user;
   }
 }
-
 ```
-
-
 
 ## 策略选项
 
@@ -362,15 +387,11 @@ export class AuthController {
 | userProperty        | string  | 设置到 ctx.state 或者 req 上的 key，默认 user     |
 | successRedirect     | string  | 用户认证成功后跳转的地址                          |
 
-
-
 ## 常见问题
-
-
 
 ### 1、Failed to serialize user into session
 
-由于 passport 默认会尝试将 user 数据写入session，如果无需将用户保存到 session，可以将 session 支持关闭。
+由于 passport 默认会尝试将 user 数据写入 session，如果无需将用户保存到 session，可以将 session 支持关闭。
 
 ```typescript
 // src/config/config.default
@@ -378,8 +399,8 @@ export default {
   // ...
   passport: {
     session: false,
-  }
-}
+  },
+};
 ```
 
 如果明确需要保存数据到 Session，则需要重写 `PassportStrategy`的 User 的序列化方法，请不要保存特别大的数据。
@@ -397,7 +418,6 @@ import * as bcrypt from 'bcrypt';
 
 @CustomStrategy()
 export class LocalStrategy extends PassportStrategy(Strategy) {
-
   // ...
   serializeUser(user, done) {
     // 可以只保存用户名
@@ -405,7 +425,6 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
   }
 
   deserializeUser(id, done) {
-
     // 这里不是异步方法，你可以从其他地方根据用户名，反查用户数据。
     const user = getUserFromDataBase(id);
 
@@ -413,6 +432,3 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
   }
 }
 ```
-
-
-

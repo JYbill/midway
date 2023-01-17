@@ -1,4 +1,3 @@
-import { APPLICATION_KEY, MidwayFrameworkType, Provide } from '@midwayjs/decorator';
 import * as assert from 'assert';
 import * as path from 'path';
 import * as mm from 'mm';
@@ -10,9 +9,14 @@ import {
   MidwayRequestContainer,
   MidwayDecoratorService,
   MidwayMiddlewareService,
-  ContextMiddlewareManager, getCurrentAsyncContextManager, ASYNC_CONTEXT_MANAGER_KEY,
+  ContextMiddlewareManager,
+  getCurrentAsyncContextManager,
+  ASYNC_CONTEXT_MANAGER_KEY,
+  APPLICATION_KEY,
+  MidwayFrameworkType,
+  Provide
 } from '../src';
-import { createLightFramework } from './util';
+import { createFramework, createLightFramework } from './util';
 import sinon = require('sinon');
 import { IMidwayApplication } from '../src';
 import { NoopContextManager } from '../src/common/asyncContextManager';
@@ -685,5 +689,46 @@ describe('/test/baseFramework.test.ts', () => {
 
     expect(ctxLogger1).toBeDefined();
     expect(ctxLogger1 === ctxLogger2).toBeTruthy();
+  });
+
+  it('should test use guard', async () => {
+    const framework = await createLightFramework(path.join(
+      __dirname,
+      './fixtures/base-app-with-guard/src'
+    ));
+
+    const app = framework.getApplication() as IMidwayApplication;
+    expect(app.getAttr('invokeResult')).toEqual(true);
+    expect(app.getAttr('invoke2Result')).toEqual(false);
+  });
+
+  it('should test throw framework sequence error', async () => {
+    const applicationContext = await createFramework(path.join(
+      __dirname,
+      './fixtures/app-with-multi-framework-sequence-error/src'
+    ));
+
+    const midwayFrameworkService = applicationContext.get(MidwayFrameworkService);
+
+    console.log(midwayFrameworkService.getMainFramework());
+  });
+
+  it('should test injectClient for serviceFactory', async () => {
+    const applicationContext = await createFramework(path.join(
+      __dirname,
+      './fixtures/base-app-service-factory-inject/src'
+    ));
+
+    const a = await applicationContext.getAsync<any>('a');
+    expect(() => {
+      a.invokeA();
+    }).toThrow(/Please set clientName/);
+
+    expect(a.invokeB()['data']).toEqual('default1');
+    expect(a.invokeC()['data']).toEqual('default2');
+
+    expect(() => {
+      a.invokeD();
+    }).toThrow(/custom1 not found/);
   });
 });

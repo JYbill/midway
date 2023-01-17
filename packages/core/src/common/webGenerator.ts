@@ -10,14 +10,15 @@ import {
   WEB_RESPONSE_HEADER,
   WEB_RESPONSE_HTTP_CODE,
   WEB_RESPONSE_REDIRECT,
-} from '@midwayjs/decorator';
+} from '../decorator';
+import * as util from 'util';
+import { IMidwayApplication } from '../interface';
 import {
   MidwayWebRouterService,
   RouterInfo,
-  MidwayMiddlewareService,
-  IMidwayApplication,
-} from '../index';
-import * as util from 'util';
+} from '../service/webRouterService';
+import { httpError } from '../error';
+import { MidwayMiddlewareService } from '../service/middlewareService';
 
 const debug = util.debuglog('midway:debug');
 
@@ -35,6 +36,15 @@ export abstract class WebControllerGenerator<
    */
   public generateKoaController(routeInfo: RouterInfo) {
     return async (ctx, next) => {
+      if (routeInfo.controllerClz && typeof routeInfo.method === 'string') {
+        const isPassed = await this.app
+          .getFramework()
+          .runGuard(ctx, routeInfo.controllerClz, routeInfo.method);
+        if (!isPassed) {
+          throw new httpError.ForbiddenError();
+        }
+      }
+
       const args = [ctx, next];
       let result;
       if (typeof routeInfo.method !== 'string') {

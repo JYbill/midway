@@ -1,6 +1,10 @@
-import { Configuration, Inject } from '@midwayjs/decorator';
+import {
+  Configuration,
+  IMidwayContainer,
+  Inject,
+  MidwayApplicationManager,
+} from '@midwayjs/core';
 import { StaticMiddleware } from './middleware/static.middleware';
-import { MidwayApplicationManager } from '@midwayjs/core';
 import * as DefaultConfig from './config/config.default';
 
 @Configuration({
@@ -25,11 +29,15 @@ export class StaticFileConfiguration {
     }
   }
 
-  async onReady() {
+  async onReady(container: IMidwayContainer) {
     this.applicationManager
       .getApplications(['koa', 'faas', 'egg'])
       .forEach(app => {
-        app.getMiddleware().insertFirst(StaticMiddleware);
+        if (container.hasNamespace('cross-domain')) {
+          app.getMiddleware().insertAfter(StaticMiddleware, 'cors');
+        } else {
+          app.getMiddleware().insertFirst(StaticMiddleware);
+        }
       });
   }
 }

@@ -60,7 +60,7 @@ export class ContainerLifeCycle {
 
 
 
-### 2、对象形式加载
+### 1、对象形式加载
 
 从 Midway v3 开始，我们将以标准的对象加载方式作为主推的配置引入形式。
 
@@ -468,9 +468,25 @@ export class ContainerLifeCycle {
     const remoteConfig = await remoteConfigService.getData();
 
     // 这里的返回值会和全局的 config 做合并
-    return {
-    	data: remoteConfig
-    };
+    // const remoteConfig = {
+    //   typeorm: {
+    //     dataSource: {
+    //       default: {
+    //         type: "mysql",
+    //         host: "localhost",
+    //         port: 3306,
+    //         username: "root",
+    //         password: "123456",
+    //         database: "admin",
+    //         synchronize: false,
+    //         logging: false,
+    //         entities: "/**/**.entity.ts",
+    //         dateStrings: true
+    //       }
+    //     }
+    //   }
+    // }
+    return remoteConfig;
   }
 }
 ```

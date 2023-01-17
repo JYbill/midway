@@ -1,6 +1,6 @@
 # 启动和部署
 
-Midway 提供了一个轻量的启动器，用于启动你的应用。我们为应用提供了多种部署模式，你既可以将应用按照传统的样子，部署到任意的服务上（比如自己购买的服务器），也可以将应用构建为一个 Serverless 应用，Midway 提供跨多云的部署方式。
+Midway 提供了一个轻量的启动器，用于启动你的应用。我们为应用提供了多种部署模式，你既可以将应用按照传统的样子，部署到任意的服务器上（比如自己购买的服务器），也可以将应用构建为一个 Serverless 应用，Midway 提供跨多云的部署方式。
 
 
 ## 本地开发
@@ -122,13 +122,13 @@ $ npm run dev
 
 ```bash
 ## 服务器构建（已经下载好代码）
-$ npm install                                       # 安装开发期依赖
-$ npm run build																			# 构建项目
-$ npm prune --production												    # 移除开发依赖
+$ npm install             # 安装开发期依赖
+$ npm run build           # 构建项目
+$ npm prune --production  # 移除开发依赖
 
 ## 本地构建（已经安装好 dev 依赖）
 $ npm run build
-$ npm prune --production														# 移除开发依赖
+$ npm prune --production  # 移除开发依赖
 ```
 
 :::info
@@ -137,7 +137,7 @@ $ npm prune --production														# 移除开发依赖
 
 
 执行完构建后，会出现 Midway 构建产物 `dist` 目录。
-```bash
+```text
 ➜  my_midway_app tree
 .
 ├── src
@@ -205,7 +205,7 @@ Bootstrap.run();
 
 这个时候，你已经可以直接使用 `NODE_ENV=production node bootstrap.js` 来启动代码了，也可以使用 pm2 来执行启动。
 
-我们一般推荐使用工具使用工具来启动 Node.js 项目，下面有一些文档可以进阶阅读。
+我们一般推荐使用工具来启动 Node.js 项目，下面有一些文档可以进阶阅读。
 
 - [pm2 使用文档](extensions/pm2)
 - [cfork 使用文档](extensions/cfork)
@@ -281,7 +281,7 @@ Bootstrap
 步骤一：在当前目录下新增Dockerfile
 
 ```dockerfile
-FROM node:12
+FROM node:18
 
 WORKDIR /app
 
@@ -297,7 +297,7 @@ RUN npm run build
 # 如果端口更换，这边可以更新一下
 EXPOSE 7001
 
-CMD ["npm", "run", "online"]
+CMD ["npm", "run", "start"]
 ```
 
 
@@ -326,20 +326,22 @@ $ docker run -itd -P helloworld
 
 ![image.png](https://cdn.nlark.com/yuque/0/2020/png/187105/1608882559686-031bcf0d-2185-42cd-a838-80f008777395.png#height=94&id=dfag9&margin=%5Bobject%20Object%5D&name=image.png&originHeight=188&originWidth=578&originalType=binary&ratio=1&size=24488&status=done&style=none&width=289)
 
-关于别的推送到 dockerhub 或者 docker 的 registry，可以大家搜索对应的方法。
+后续：发布 docker 镜像
+* 推送构建好的镜像到DockerHub，请参考[官方文档](https://docs.docker.com/get-started/04_sharing_app/)
+* 推送到自建的镜像仓库（以Harbor为例），请参考[Harbor文档](https://goharbor.io/docs/2.5.0/working-with-projects/working-with-images/pulling-pushing-images/)
 
 
 **优化**
 
 我们看到前面我们打出来的镜像有1个多G，可优化的地方：
-- 1、我们可以采用更精简的 docker image 的基础镜像：例如 node:12-alpine，
+- 1、我们可以采用更精简的 docker image 的基础镜像：例如 node:18-alpine，
 - 2、其中的源码最终也打在了镜像中，其实这块我们可以不需要。
 
 我们可以同时结合 docker 的 multistage 功能来做一些优化，这个功能请注意要在 `Docker 17.05` 版本之后才能使用。
 
 
 ```dockerfile
-FROM node:12 AS build
+FROM node:18 AS build
 
 WORKDIR /app
 
@@ -349,11 +351,13 @@ RUN npm install
 
 RUN npm run build
 
-FROM node:12-alpine
+FROM node:18-alpine
 
 WORKDIR /app
 
 COPY --from=build /app/dist ./dist
+# 把源代码复制过去， 以便报错能报对行
+COPY --from=build /app/src ./src
 COPY --from=build /app/bootstrap.js ./
 COPY --from=build /app/package.json ./
 
@@ -373,19 +377,21 @@ CMD ["npm", "run", "start"]
 
 ### 结合 Docker-Compose 运行
 
-在 docker 部署的基础上，还可以结合 docker-compose 部署一些跟自己服务相关的服务。
+在 docker 部署的基础上，还可以结合 docker-compose 配置项目依赖的服务，实现快速部署整个项目。
+下面以midway结合redis为例，使用 docker-compose 快速部署整个项目。
 
 
-**步骤一**
+**步骤一：编写Dockerfile**
 
-按照 Docker 方式部署的方式新增 dockerfile
+按照上文使用 Docker 部署的方式[编写Dockerfile](deployment#编写-dockerfile构建镜像)
 
 
-**步骤二**
+**步骤二：编写docker-compose.yml**
 
-新增 `docker-compose.yml` 文件，内容如下：（此处我们模拟我们的 midway 项目需要使用redis）
+新增 `docker-compose.yml` 文件，内容如下：（此处模拟我们的 midway 项目需要使用redis）
 
 ```yaml
+# 项目的根目录，与Dockerfile文件同级
 version: "3"
 services:
   web:
@@ -394,13 +400,34 @@ services:
       - "7001:7001"
     links:
       - redis
+    depends_on:
+      - redis
   redis:
     image: redis
 
 ```
 
+**步骤三：修改配置**
 
-**步骤三：构建**
+修改redis的配置文件，内容如下：（ 配置redis，请参考[redis组件](extensions/redis) ）
+
+```javascript
+// src/config/config.default.ts
+export default {
+ // ...
+  redis: {
+    client: {
+      port: 6379, // redis容器的端口
+      host: "redis", // 这里与docker-compose.yml文件中的redis服务名称一致
+      password: "", //默认没有密码，请自行修改为redis容器配置的密码
+      db: 0,
+    },
+  },
+}
+
+```
+
+**步骤四：构建**
 
 使用命令：
 
@@ -408,16 +435,17 @@ services:
 $ docker-compose build
 ```
 
-**步骤四：运行**
+**步骤五：运行**
 
 ```bash
 $ docker-compose up -d
 ```
 
-![image.png](https://cdn.nlark.com/yuque/0/2020/png/187105/1608884158660-02bd2d3c-08b4-4ecc-a4dd-a18d4b9d2c12.png#height=44&id=jWw4i&margin=%5Bobject%20Object%5D&name=image.png&originHeight=62&originWidth=1054&originalType=binary&ratio=1&size=47727&status=done&style=none&width=746)
-那么redis比如怎么用，因为 docker-compose 里面加了一个 redis，并且 link 了。
+![](https://cdn.nlark.com/yuque/0/2020/png/187105/1608884158660-02bd2d3c-08b4-4ecc-a4dd-a18d4b9d2c12.png)
 
-关于更多关于 docker-compose 的详情，可以查看网上关于 docker-compose 的使用方法。
+**后续**
+
+更多关于 docker-compose ，请参考[官方文档](https://docs.docker.com/compose/)
 
 
 
@@ -459,9 +487,13 @@ $ npm i @vercel/ncc --save-dev
 
 
 
-### 代码部分
+### 代码调整
 
-必须将项目引入的配置调整为 "对象模式"。
+有一些可能的调整，列举如下：
+
+#### 1、配置格式调整
+
+必须将项目引入的配置调整为 [对象模式](./env_config)。
 
 Midway 的官方组件都已经调整为该模式，如果有自己编写的组件，也请调整为该模式才能构建为单文件。
 
@@ -490,6 +522,44 @@ import * as LocalConfig from './config/config.local';
 export class ContainerLifeCycle {
 }
 ```
+
+
+
+#### 2、默认导出的情况
+
+由于 ncc 构建器的默认行为，请 **不要** 在依赖注入相关的代码中使用默认导出。
+
+比如：
+
+```typescript
+export default class UserSerivce {
+  // ...
+}
+```
+
+编译后会导致 `UserSerivce` 无法注入。
+
+
+
+#### 3、数据源 entities 相关的
+
+数据源依赖的扫描路径也是不支持的。
+
+```typescript
+export default {
+  typeorm: {
+    dataSource: {
+      default: {
+        // ...
+        entities: [
+          '/abc',			// 不支持
+        ]
+      },
+  }
+}
+```
+
+如果 entities 特别多，可以编写一个 js 文件，扫描出 entities 后，生成一个文件到目录下，在每次构建时执行。
 
 
 

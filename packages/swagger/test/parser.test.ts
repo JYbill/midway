@@ -1,9 +1,13 @@
 import { ApiExtraModel, ApiProperty, ApiResponse, getSchemaPath, SwaggerExplorer, Type } from '../src';
-import { Controller, Post } from '@midwayjs/decorator';
+import { Controller, Post } from '@midwayjs/core';
 
 class CustomSwaggerExplorer extends SwaggerExplorer {
   generatePath(target: Type) {
     return super.generatePath(target);
+  }
+
+  parseClzz(clz) {
+    return super.parseClzz(clz);
   }
 }
 
@@ -127,5 +131,141 @@ describe('/test/parser.test.ts', function () {
     const explorer = new CustomSwaggerExplorer();
     explorer.generatePath(APIController);
     expect(explorer.getData()).toMatchSnapshot();
+  });
+
+  it('should test specify type', function () {
+    class NotificationDTO {
+      @ApiProperty({ type: 'string' })
+      id: number;
+    }
+
+    const explorer = new CustomSwaggerExplorer();
+    expect(explorer.parseClzz(NotificationDTO)).toMatchSnapshot();
+  });
+
+
+  it('should parse ref schema with function', function () {
+    class Photo {
+      @ApiProperty()
+      id: number;
+
+      @ApiProperty()
+      name: string;
+
+      @ApiProperty({
+        type: 'array',
+        items: {
+          $ref: () => getSchemaPath(Album),
+        }
+      })
+      albums: Album[];
+    }
+    class Album {
+      @ApiProperty()
+      id: number;
+
+      @ApiProperty()
+      name: string;
+
+      @ApiProperty({
+        type: 'array',
+        items: {
+          $ref: () => getSchemaPath(Photo),
+        }
+      })
+      photos: Photo[];
+    }
+
+    const explorer = new CustomSwaggerExplorer();
+    expect(explorer.parseClzz(Photo)).toMatchSnapshot();
+    expect(explorer.parseClzz(Album)).toMatchSnapshot();
+  });
+
+  it('should parse type with function', function () {
+    class Photo {
+      @ApiProperty()
+      id: number;
+
+      @ApiProperty()
+      name: string;
+
+      @ApiProperty({
+        type: () => {
+          return Album;
+        }
+      })
+      album: any;
+    }
+    class Album {
+      @ApiProperty()
+      id: number;
+
+      @ApiProperty()
+      name: string;
+
+      @ApiProperty({
+        type: Photo,
+      })
+      photo: Photo;
+    }
+
+    const explorer = new CustomSwaggerExplorer();
+    expect(explorer.parseClzz(Photo)).toMatchSnapshot();
+    expect(explorer.parseClzz(Album)).toMatchSnapshot();
+  });
+
+  it('should test multi-type in property', function () {
+    class Album {
+      @ApiProperty()
+      id: number;
+
+      @ApiProperty()
+      name: string;
+    }
+    class Photo {
+      @ApiProperty({
+        oneOf: [
+          { type: 'string' },
+          {
+            type: 'array',
+            items: {
+              type: 'string'
+            }
+          }
+        ]
+      })
+      name: string | string[];
+
+      @ApiProperty({
+        oneOf: [
+          { type: Album},
+          {
+            type: 'array',
+            items: {
+              type: () => Album,
+            }
+          }
+        ]
+      })
+      album: Album | Album[];
+    }
+    const explorer = new CustomSwaggerExplorer();
+    expect(explorer.parseClzz(Photo)).toMatchSnapshot();
+  });
+
+  it('should parse base type', function () {
+    class Cat {
+      @ApiProperty({
+        type: [String],
+        example: ['1'],
+        description: 'The name of the Catage',
+        nullable: true,
+        uniqueItems: true,
+      })
+      breeds: string[];
+    }
+
+    const explorer = new CustomSwaggerExplorer();
+    expect(explorer.parseClzz(Cat)).toMatchSnapshot();
   });
 });

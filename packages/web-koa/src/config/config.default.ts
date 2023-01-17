@@ -6,7 +6,7 @@ export const koa = {
     const ctx = info.ctx;
     // format: '[$userId/$ip/$traceId/$use_ms $method $url]'
     const userId = ctx.userId || '-';
-    const traceId = (ctx.tracer && ctx.tracer.traceId) || '-';
+    const traceId = ctx.traceId ?? ctx.tracer?.traceId ?? '-';
     const use = Date.now() - ctx.startTime;
     const label =
       userId +
@@ -22,6 +22,7 @@ export const koa = {
       ctx.url;
     return `${info.timestamp} ${info.LEVEL} ${info.pid} [${label}] ${info.message}`;
   },
+  serverTimeout: 2 * 60 * 1000,
 };
 
 /**

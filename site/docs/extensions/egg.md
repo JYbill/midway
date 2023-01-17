@@ -2,6 +2,11 @@
 
 Midway 可以使用 EggJS 作为上层 Web 框架，EggJS 提供了非常多常用的插件和 API，帮助用户快速构建企业级 Web 应用。本章节内容，主要介绍 EggJS 在 Midway 中如何使用自身的能力。
 
+| 描述              |      |
+| ----------------- | ---- |
+| 包含独立主框架    | ✅    |
+| 包含独立日志      | ✅    |
+
 
 
 ## 安装依赖
@@ -78,7 +83,7 @@ export class MainConfiguration {
 
 
 整个架构如下:
-![image.png](https://cdn.nlark.com/yuque/0/2021/png/501408/1614842824740-fc0c1432-3ace-4f77-b51f-15212984b168.png#height=828&id=Lv3hN&margin=%5Bobject%20Object%5D&name=image.png&originHeight=828&originWidth=1716&originalType=binary&ratio=1&size=117877&status=done&style=none&width=1716)
+![](https://cdn.nlark.com/yuque/0/2021/png/501408/1614842824740-fc0c1432-3ace-4f77-b51f-15212984b168.png)
 
 
 ## 目录结构
@@ -338,6 +343,33 @@ export class AutoConfiguration {
 - 4、app.useMiddleware 添加的顺序
 
 因为 midway 的中间件会后置加载，所以我们可以在 onReady 中进行自定义排序。
+
+
+
+## BodyParser
+
+egg 自带  `bodyParser` 功能，默认会解析 `Post` 请求，自动识别 `json` 和 `form` 类型。
+
+如需 text 或者 xml，可以自行配置。
+
+默认的大小限制为 `1mb`，可以单独对每项配置大小。
+
+```typescript
+// src/config/config.default
+export default {
+  // ...
+  bodyParser: {
+    formLimit: '1mb',
+    jsonLimit: '1mb',
+    textLimit: '1mb',
+    xmlLimit: '1mb',
+  },
+}
+```
+
+注意，使用 Postman 做 Post 请求时的类型选择：
+
+![postman](https://img.alicdn.com/imgextra/i4/O1CN01QCdTsN1S347SuzZU5_!!6000000002190-2-tps-1017-690.png)
 
 
 

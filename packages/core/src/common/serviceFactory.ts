@@ -1,9 +1,10 @@
 import { extend } from '../util/extend';
+import { IServiceFactory } from '../interface';
 
 /**
  * 多客户端工厂实现
  */
-export abstract class ServiceFactory<T> {
+export abstract class ServiceFactory<T> implements IServiceFactory<T> {
   protected clients: Map<string, T> = new Map();
   protected options = {};
 
@@ -15,7 +16,6 @@ export abstract class ServiceFactory<T> {
       options.clients = options.clients || {};
       options.clients['default'] = options.clients['default'] || {};
       extend(true, options.clients['default'], options.client);
-      delete options.client;
     }
 
     // multi client
@@ -34,7 +34,7 @@ export abstract class ServiceFactory<T> {
     return this.clients.has(id);
   }
 
-  public async createInstance(config, clientName?): Promise<T | void> {
+  public async createInstance(config, clientName?): Promise<T | undefined> {
     // options.default will be merge in to options.clients[id]
     config = extend(true, {}, this.options['default'], config);
     const client = await this.createClient(config, clientName);
@@ -57,5 +57,9 @@ export abstract class ServiceFactory<T> {
     for (const value of this.clients.values()) {
       await this.destroyClient(value);
     }
+  }
+
+  public getDefaultClientName(): string {
+    return this.options['defaultClientName'];
   }
 }

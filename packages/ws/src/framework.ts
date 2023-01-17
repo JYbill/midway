@@ -5,6 +5,16 @@ import {
   HTTP_SERVER_KEY,
   IMidwayBootstrapOptions,
   MidwayFrameworkType,
+  Types,
+  WS_CONTROLLER_KEY,
+  WS_EVENT_KEY,
+  WSEventInfo,
+  WSEventTypeEnum,
+  getClassMetadata,
+  listModule,
+  Framework,
+  WSControllerOption,
+  MidwayInvokeForbiddenError,
 } from '@midwayjs/core';
 import * as http from 'http';
 import { debuglog } from 'util';
@@ -19,17 +29,6 @@ import {
   NextFunction,
 } from './interface';
 import * as WebSocket from 'ws';
-import {
-  Types,
-  WS_CONTROLLER_KEY,
-  WS_EVENT_KEY,
-  WSEventInfo,
-  WSEventTypeEnum,
-  getClassMetadata,
-  listModule,
-  Framework,
-  WSControllerOption,
-} from '@midwayjs/decorator';
 
 @Framework()
 export class MidwayWSFramework extends BaseFramework<
@@ -175,6 +174,16 @@ export class MidwayWSFramework extends BaseFramework<
                   [
                     ...(wsEventInfo?.eventOptions?.middleware || []),
                     async (ctx, next) => {
+                      const isPassed = await this.app
+                        .getFramework()
+                        .runGuard(ctx, target, wsEventInfo.propertyName);
+                      if (!isPassed) {
+                        throw new MidwayInvokeForbiddenError(
+                          wsEventInfo.propertyName,
+                          target
+                        );
+                      }
+
                       // eslint-disable-next-line prefer-spread
                       return controller[wsEventInfo.propertyName].apply(
                         controller,

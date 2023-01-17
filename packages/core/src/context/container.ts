@@ -3,22 +3,20 @@ import {
   getClassMetadata,
   IComponentInfo,
   InjectionConfigurationOptions,
-  Types,
   listModule,
   MAIN_MODULE_KEY,
-  ObjectIdentifier,
   saveModule,
   saveProviderId,
-  ScopeEnum,
   getProviderUUId,
   getPropertyInject,
   getObjectDefinition,
   getClassExtendedMetadata,
   INJECT_CUSTOM_PROPERTY,
   getProviderName,
+  ScopeEnum,
   IModuleStore,
-  Utils,
-} from '@midwayjs/decorator';
+  ObjectIdentifier,
+} from '../decorator';
 import { FunctionalConfiguration } from '../functional/configuration';
 import * as util from 'util';
 import { ObjectDefinitionRegistry } from './definitionRegistry';
@@ -30,9 +28,8 @@ import {
   IObjectDefinitionRegistry,
   ObjectContext,
   ObjectLifeCycleEvent,
-  REQUEST_CTX_KEY,
 } from '../interface';
-import { FUNCTION_INJECT_KEY } from '../common/constants';
+import { FUNCTION_INJECT_KEY, REQUEST_CTX_KEY } from '../constants';
 import { ObjectDefinition } from '../definitions/objectDefinition';
 import { FunctionDefinition } from '../definitions/functionDefinition';
 import {
@@ -44,6 +41,8 @@ import { MidwayConfigService } from '../service/configService';
 import * as EventEmitter from 'events';
 import { MidwayDefinitionNotFoundError } from '../error';
 import { extend } from '../util/extend';
+import { Types } from '../util/types';
+import { Utils } from '../util';
 
 const debug = util.debuglog('midway:debug');
 const debugBind = util.debuglog('midway:bind');
@@ -679,6 +678,10 @@ export class MidwayContainer implements IMidwayContainer, IModuleStore {
 
   hasNamespace(ns: string) {
     return this.namespaceSet.has(ns);
+  }
+
+  getNamespaceList() {
+    return Array.from(this.namespaceSet);
   }
 
   hasDefinition(identifier: ObjectIdentifier) {

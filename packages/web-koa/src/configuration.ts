@@ -3,8 +3,6 @@ import {
   Init,
   Inject,
   WEB_ROUTER_PARAM_KEY,
-} from '@midwayjs/decorator';
-import {
   extractKoaLikeValue,
   MidwayConfigService,
   MidwayDecoratorService,
@@ -43,7 +41,8 @@ export class KoaConfiguration {
         return extractKoaLikeValue(
           options.metadata.type,
           options.metadata.propertyData,
-          options.originParamType
+          options.originParamType,
+          options.metadata?.pipes
         )(options.originArgs[0], options.originArgs[1]);
       }
     );

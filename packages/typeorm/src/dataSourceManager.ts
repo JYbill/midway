@@ -6,8 +6,9 @@ import {
   Inject,
   ScopeEnum,
   ApplicationContext,
-} from '@midwayjs/decorator';
-import { DataSourceManager, IMidwayContainer } from '@midwayjs/core';
+  DataSourceManager,
+  IMidwayContainer,
+} from '@midwayjs/core';
 import { DataSource } from 'typeorm';
 
 @Provide()
@@ -35,6 +36,9 @@ export class TypeORMDataSourceManager extends DataSourceManager<DataSource> {
     config: any,
     dataSourceName: string
   ): Promise<DataSource> {
+    if (config['migrations']) {
+      delete config['migrations'];
+    }
     const dataSource = new DataSource(config);
     await dataSource.initialize();
     return dataSource;

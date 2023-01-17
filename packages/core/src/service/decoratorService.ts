@@ -4,13 +4,13 @@ import {
   Inject,
   Provide,
   Scope,
-  ScopeEnum,
   INJECT_CUSTOM_METHOD,
   APPLICATION_CONTEXT_KEY,
   INJECT_CUSTOM_PARAM,
   JoinPoint,
   getMethodParamTypes,
-} from '@midwayjs/decorator';
+  ScopeEnum,
+} from '../decorator';
 import {
   HandlerFunction,
   IMidwayContainer,
@@ -65,7 +65,7 @@ export class MidwayDecoratorService {
                   `Method Decorator "${key}" handler not found, please register first.`
                 );
               }
-              return this.methodDecoratorMap.get(key)({
+              return methodDecoratorHandler({
                 target: Clzz,
                 propertyName,
                 metadata,

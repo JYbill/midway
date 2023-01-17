@@ -11,6 +11,10 @@ Midway 提供了 jwt 组件，简单提供了一些 jwt 相关的 API，可以�
 | 可用于标准项目    | ✅  |
 | 可用于 Serverless | ✅  |
 | 可用于一体化      | ✅  |
+| 包含独立主框架    | ❌    |
+| 包含独立日志      | ❌    |
+
+
 
 ## 安装依赖
 
@@ -49,13 +53,7 @@ import * as jwt from '@midwayjs/jwt';
   ],
 })
 export class MainConfiguration {
-  async onReady(applicationContext: IMidwayContainer): Promise<void> {
-    // 添加中间件
-    this.app.useMiddleware([
-      // ...
-      JwtMiddleware,
-    ]);
-  }
+  // ...
 }
 ```
 
@@ -107,7 +105,7 @@ export class UserService {
 
 ## 中间件示例
 
-下面是一个自定义 jwt 鉴权的中间件示例。
+一般，jwt 还会配合中间件来完成鉴权，下面是一个自定义 jwt 鉴权的中间件示例。
 
 ```typescript
 // src/middleware/jwt.middleware
@@ -162,6 +160,37 @@ export class JwtMiddleware {
   public match(ctx: Context): boolean {
     const ignore = ctx.path.indexOf('/api/admin/login') !== -1;
     return !ignore;
+  }
+}
+```
+
+然后在入口启用中间件即可。
+
+
+```typescript
+// src/configuration.ts
+
+import { Configuration, App } from '@midwayjs/decorator';
+import { IMidwayContainer, IMidwayApplication} from '@midwayjs/core';
+import * as jwt from '@midwayjs/jwt';
+
+@Configuration({
+  imports: [
+    // ...
+    jwt,
+  ],
+})
+export class MainConfiguration {
+
+  @App()
+  app: IMidwayApplication;
+
+  async onReady(applicationContext: IMidwayContainer): Promise<void> {
+    // 添加中间件
+    this.app.useMiddleware([
+      // ...
+      JwtMiddleware,
+    ]);
   }
 }
 ```

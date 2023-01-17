@@ -1,5 +1,9 @@
-import { Config, Middleware, MidwayFrameworkType } from '@midwayjs/decorator';
-import { IMiddleware } from '@midwayjs/core';
+import {
+  Config,
+  Middleware,
+  MidwayFrameworkType,
+  IMiddleware,
+} from '@midwayjs/core';
 import { CORSOptions } from '../interface';
 import * as vary from 'vary';
 @Middleware()
@@ -114,5 +118,9 @@ export class CorsMiddleware implements IMiddleware<any, any> {
       };
       throw err;
     }
+  }
+
+  static getName(): string {
+    return 'cors';
   }
 }

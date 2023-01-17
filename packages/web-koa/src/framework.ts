@@ -11,10 +11,10 @@ import {
   MidwayConfigMissingError,
   httpError,
   MidwayWebRouterService,
+  Framework,
+  Types,
 } from '@midwayjs/core';
 import { Cookies } from '@midwayjs/cookies';
-
-import { Framework } from '@midwayjs/decorator';
 import {
   IMidwayKoaApplication,
   IMidwayKoaConfigurationOptions,
@@ -24,7 +24,7 @@ import {
 import * as Router from '@koa/router';
 import type { DefaultState, Middleware, Next } from 'koa';
 import * as koa from 'koa';
-import { Server } from 'net';
+import { Server } from 'http';
 import { setupOnError } from './onerror';
 
 const COOKIES = Symbol('context#cookies');
@@ -212,6 +212,11 @@ export class MidwayKoaFramework extends BaseFramework<
     }
     // register httpServer to applicationContext
     this.applicationContext.registerObject(HTTP_SERVER_KEY, this.server);
+
+    // server timeout
+    if (Types.isNumber(this.configurationOptions.serverTimeout)) {
+      this.server.setTimeout(this.configurationOptions.serverTimeout);
+    }
 
     // set port and listen server
     const customPort =

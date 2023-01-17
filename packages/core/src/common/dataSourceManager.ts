@@ -4,14 +4,15 @@
 import { extend } from '../util/extend';
 import { MidwayCommonError, MidwayParameterError } from '../error';
 import { run } from '@midwayjs/glob';
-import { join } from 'path';
-import { Types } from '@midwayjs/decorator';
-import { DEFAULT_PATTERN, IGNORE_PATTERN } from '../interface';
+import { join, parse } from 'path';
+import { Types } from '../util/types';
+import { DEFAULT_PATTERN, IGNORE_PATTERN } from '../constants';
 
 export abstract class DataSourceManager<T> {
   protected dataSource: Map<string, T> = new Map();
   protected options = {};
   protected modelMapping = new WeakMap();
+  private innerDefaultDataSourceName: string;
 
   protected async initDataSource(options: any, appDir: string): Promise<void> {
     this.options = options;
@@ -141,30 +142,45 @@ export abstract class DataSourceManager<T> {
     );
     this.dataSource.clear();
   }
+
+  public getDefaultDataSourceName(): string {
+    if (this.innerDefaultDataSourceName === undefined) {
+      if (this.options['defaultDataSourceName']) {
+        this.innerDefaultDataSourceName = this.options['defaultDataSourceName'];
+      } else if (this.dataSource.size === 1) {
+        // Set the default source name when there is only one data source
+        this.innerDefaultDataSourceName = Array.from(this.dataSource.keys())[0];
+      } else {
+        // Set empty string for cache
+        this.innerDefaultDataSourceName = '';
+      }
+    }
+    return this.innerDefaultDataSourceName;
+  }
+}
+
+export function formatGlobString(globString: string): string[] {
+  let pattern;
+
+  if (!/^\*/.test(globString)) {
+    globString = '/' + globString;
+  }
+  const parsePattern = parse(globString);
+  if (parsePattern.base && (/\*/.test(parsePattern.base) || parsePattern.ext)) {
+    pattern = [globString];
+  } else {
+    pattern = [...DEFAULT_PATTERN.map(p => join(globString, p))];
+  }
+  return pattern;
 }
 
 export function globModels(globString: string, appDir: string) {
-  let cwd;
-  let pattern;
-
-  if (globString.endsWith('**')) {
-    // 去掉尾部的 **，因为 glob 会自动添加
-    globString = globString.slice(0, -2);
-  }
-
-  if (/\*/.test(globString)) {
-    cwd = appDir;
-    pattern = [...DEFAULT_PATTERN.map(p => join(globString, p))];
-    pattern.push(globString);
-  } else {
-    pattern = [...DEFAULT_PATTERN];
-    cwd = join(appDir, globString);
-  }
+  const pattern = formatGlobString(globString);
 
   const models = [];
   // string will be glob file
   const files = run(pattern, {
-    cwd,
+    cwd: appDir,
     ignore: IGNORE_PATTERN,
   });
   for (const file of files) {

@@ -1,21 +1,20 @@
 import {
   IMidwayBootstrapOptions,
   IMidwayContainer,
+  MidwayApplicationManager,
   initializeGlobalApplicationContext,
   destroyGlobalApplicationContext,
 } from '@midwayjs/core';
 import { join } from 'path';
 import { IMidwayLogger, MidwayBaseLogger } from '@midwayjs/logger';
 import { createContextManager } from '@midwayjs/async-hooks-context-manager';
-
-export function isTypeScriptEnvironment() {
-  const TS_MODE_PROCESS_FLAG: string = process.env.MIDWAY_TS_MODE;
-  if ('false' === TS_MODE_PROCESS_FLAG) {
-    return false;
-  }
-  // eslint-disable-next-line node/no-deprecated-api
-  return TS_MODE_PROCESS_FLAG === 'true' || !!require.extensions['.ts'];
-}
+import { isTypeScriptEnvironment } from './util';
+import {
+  ChildProcessEventBus,
+  ThreadEventBus,
+  IEventBus,
+} from '@midwayjs/event-bus';
+import { setupWorker } from './sticky';
 
 export class BootstrapStarter {
   protected appDir: string;
@@ -23,32 +22,57 @@ export class BootstrapStarter {
   protected globalOptions: Partial<IMidwayBootstrapOptions> = {};
   protected globalConfig: any;
   private applicationContext: IMidwayContainer;
+  private eventBus: IEventBus<any>;
 
-  public configure(options: IMidwayBootstrapOptions) {
+  public configure(options: IMidwayBootstrapOptions = {}) {
     this.globalOptions = options;
     return this;
   }
 
   public async init() {
-    this.appDir = this.globalOptions.appDir || process.cwd();
-    this.baseDir = this.getBaseDir();
+    this.appDir = this.globalOptions.appDir =
+      this.globalOptions.appDir || process.cwd();
+    this.baseDir = this.globalOptions.baseDir = this.getBaseDir();
+
+    if (process.env['MIDWAY_FORK_MODE']) {
+      if (process.env['MIDWAY_FORK_MODE'] === 'cluster') {
+        this.eventBus = new ChildProcessEventBus({
+          isWorker: true,
+        });
+      } else if (process.env['MIDWAY_FORK_MODE'] === 'thread') {
+        this.eventBus = new ThreadEventBus({
+          isWorker: true,
+        });
+      }
+    }
 
     this.applicationContext = await initializeGlobalApplicationContext({
-      ...this.globalOptions,
-      appDir: this.appDir,
-      baseDir: this.baseDir,
       asyncContextManager: createContextManager(),
+      ...this.globalOptions,
     });
     return this.applicationContext;
   }
 
   public async run() {
     this.applicationContext = await this.init();
+    if (this.eventBus) {
+      await this.eventBus.start();
+      if (process.env['MIDWAY_STICKY_MODE'] === 'true') {
+        const applicationManager = this.applicationContext.get(
+          MidwayApplicationManager
+        );
+        const io = applicationManager.getApplication('socketIO');
+        setupWorker(io);
+      }
+    }
   }
 
   public async stop() {
     if (this.applicationContext) {
       await destroyGlobalApplicationContext(this.applicationContext);
+    }
+    if (this.eventBus) {
+      await this.eventBus.stop();
     }
   }
 
@@ -69,9 +93,9 @@ export class BootstrapStarter {
 }
 
 export class Bootstrap {
-  private static starter: BootstrapStarter;
-  private static logger: IMidwayLogger;
-  private static configured = false;
+  protected static starter: BootstrapStarter;
+  protected static logger: IMidwayLogger;
+  protected static configured = false;
 
   /**
    * set global configuration for midway
@@ -101,7 +125,7 @@ export class Bootstrap {
     return this;
   }
 
-  private static getStarter() {
+  static getStarter() {
     if (!this.starter) {
       this.starter = new BootstrapStarter();
     }
@@ -134,6 +158,7 @@ export class Bootstrap {
       .then(() => {
         this.logger.info('[midway:bootstrap] current app started');
         global['MIDWAY_BOOTSTRAP_APP_READY'] = true;
+        return this.getApplicationContext();
       })
       .catch(err => {
         this.logger.error(err);

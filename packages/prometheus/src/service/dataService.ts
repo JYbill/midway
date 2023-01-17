@@ -1,4 +1,4 @@
-import { Config, Provide, Scope, ScopeEnum } from '@midwayjs/decorator';
+import { Config, Provide, Scope, ScopeEnum } from '@midwayjs/core';
 import * as Client from 'prom-client';
 import { Master } from '../decorator/master';
 import * as PromClient from 'prom-client';
@@ -80,6 +80,16 @@ export class DataService {
       { ...labels, ...this.prometheusConfig.labels },
       value
     );
+  }
+
+  @Master()
+  async observe(name, labels, value) {
+    this.userDefinedMetrics[name]
+      .labels(
+        ...labels,
+        ...(Object.values(this.prometheusConfig.labels) as string[])
+      )
+      .observe(value);
   }
 
   @Master()
